@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Maskable variant: content fits inside the 80% safe zone (centered circle r≈410). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0f0e"/>
+      <stop offset="100%" stop-color="#141a19"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c4dff"/>
+      <stop offset="100%" stop-color="#3ecfb0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(512 512)">
+    <circle r="240" fill="none" stroke="#1f2a28" stroke-width="40"/>
+    <circle r="240" fill="none" stroke="url(#ring)" stroke-width="40"
+            stroke-linecap="round"
+            stroke-dasharray="1130.97 1507.96"
+            transform="rotate(-90)"/>
+  </g>
+  <circle cx="512" cy="512" r="96" fill="#3ecfb0"/>
+</svg>

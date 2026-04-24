@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#3ecfb0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FocusFlow">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="msapplication-tap-highlight" content="no">
+<meta name="description" content="Habits, tasks, deep work, meditation, journal — your all-in-one focus OS.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
+<title>FocusFlow — Your Day, Elevated</title>
+<link rel="stylesheet" href="/src/styles/tokens.css">
+<link rel="stylesheet" href="/src/styles/base.css">
+<link rel="stylesheet" href="/src/styles/layout.css">
+<link rel="stylesheet" href="/src/styles/components.css">
+<link rel="stylesheet" href="/src/styles/pages.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">⚡</div>
+    <div>
+      <div class="logo-text">FocusFlow</div>
+      <div class="logo-sub">YOUR DAY, ELEVATED</div>
+    </div>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <nav id="sidenav">
+    <div class="nav-item active" data-page="dashboard"><span class="nav-emoji">🏠</span> Dashboard</div>
+    <div class="nav-item" data-page="habits"><span class="nav-emoji">✅</span> Habits</div>
+    <div class="nav-item" data-page="chores"><span class="nav-emoji">🧹</span> Chores</div>
+    <div class="nav-section">Work</div>
+    <div class="nav-item" data-page="projects"><span class="nav-emoji">📁</span> Projects & Tasks</div>
+    <div class="nav-item" data-page="goals"><span class="nav-emoji">🎯</span> Goals</div>
+    <div class="nav-section">Wellness</div>
+    <div class="nav-item" data-page="deepwork"><span class="nav-emoji">🧠</span> Deep Work</div>
+    <div class="nav-item" data-page="meditation"><span class="nav-emoji">🧘</span> Meditation</div>
+    <div class="nav-item" data-page="fitness"><span class="nav-emoji">💪</span> Fitness</div>
+    <div class="nav-section">Life</div>
+    <div class="nav-item" data-page="shopping"><span class="nav-emoji">🛒</span> Shopping</div>
+    <div class="nav-item" data-page="journal"><span class="nav-emoji">📓</span> Journal</div>
+    <div class="nav-section">You</div>
+    <div class="nav-item" data-page="profile"><span class="nav-emoji">👤</span> Profile & AI</div>
+    <div class="nav-item" data-page="settings"><span class="nav-emoji">⚙️</span> Settings</div>
+  </nav>
+
+  <div class="nav-footer">
+    <button class="theme-btn" id="themeBtn">🌙 Dark mode</button>
+    <div class="save-indicator" id="saveIndicator"></div>
+  </div>
+</aside>
+
+<main class="main" id="main">
+
+<!-- ═══════════════════════════════════════ DASHBOARD ═══ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header" id="hdr-dashboard">
+    <div class="page-header-inner">
+      <div class="page-title-wrap">
+        <div class="page-subtitle" id="dash-date-label">Loading…</div>
+        <div class="page-title" id="dash-greeting">Good morning</div>
+      </div>
+      <div class="header-actions">
+        <div class="autosave-wrap" id="autosaveDot"><div class="autosave-dot" id="autosaveDotInner"></div><span id="autosaveLabel">Saved</span></div>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="s-habits">0%</div><div class="stat-label">Habits</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="s-tasks">0</div><div class="stat-label">Done</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="s-focus">0h</div><div class="stat-label">Focus</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="s-streak">0</div><div class="stat-label">Streak</div></div>
+    </div>
+    <div id="dash-schedule" style="margin-bottom:14px"></div>
+    <div id="dash-goals" style="margin-bottom:14px"></div>
+    <div id="dash-priorities" style="margin-bottom:14px"></div>
+    <div id="dash-bad-habits" style="margin-bottom:14px"></div>
+    <div id="dash-timeblocks"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ HABITS ════════ -->
+<div class="page" id="page-habits">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Habits</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseHabits()">− Fold</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandHabits()">+ Expand</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddHabit()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="h-today">Today</div>
+      <div class="tab" data-tab="h-all">All Habits</div>
+      <div class="tab" data-tab="h-heatmap">History</div>
+    </div>
+  </div>
+  <div id="h-today" class="tab-content section">
+    <div id="h-morning"></div><div id="h-afternoon"></div><div id="h-evening"></div>
+  </div>
+  <div id="h-all" class="tab-content section" style="display:none"><div id="h-all-list"></div></div>
+  <div id="h-heatmap" class="tab-content section" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Habit History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHabitHeatmap()"></div>
+      </div>
+      <div class="heatmap" id="heatmap-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ CHORES ═══════ -->
+<div class="page" id="page-chores">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Chores</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseChores()">− Fold</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandChores()">+ Expand</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddChore()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section"><div id="chores-week"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════ PROJECTS ════ -->
+<div class="page" id="page-projects">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Projects</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseProjects()">−</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandProjects()">+</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddProject()">+ New</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="pv-tree">Projects</div>
+      <div class="tab" data-tab="pv-all">All Tasks</div>
+      <div class="tab" data-tab="pv-today">Due Today</div>
+      <div class="tab" data-tab="pv-overdue">Overdue</div>
+      <div class="tab" data-tab="pv-breakdown">Overview</div>
+    </div>
+  </div>
+  <div class="section">
+    <div id="pv-tree" class="tab-content"><div id="proj-tree"></div></div>
+    <div id="pv-all" class="tab-content" style="display:none">
+      <div class="sort-bar">
+        <label>Sort</label><select id="all-sort" onchange="renderAllFlat()"><option value="priority">Priority</option><option value="due">Due</option><option value="project">Project</option><option value="name">Name</option></select>
+        <label>Show</label><select id="all-filter" onchange="renderAllFlat()"><option value="active">Active</option><option value="all">All</option><option value="done">Done</option></select>
+      </div>
+      <div id="all-flat"></div>
+    </div>
+    <div id="pv-today" class="tab-content" style="display:none"><div id="today-tasks"></div></div>
+    <div id="pv-overdue" class="tab-content" style="display:none"><div id="overdue-tasks"></div></div>
+    <div id="pv-breakdown" class="tab-content" style="display:none"><div id="breakdown"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ GOALS ════════ -->
+<div class="page" id="page-goals">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Goals</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseGoals()">−</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandGoals()">+</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddGoal()">+ New</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section"><div id="goals-list"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════ DEEP WORK ════ -->
+<div class="page" id="page-deepwork">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Deep Work</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="ambient-card">
+      <div class="card-header" style="margin-bottom:8px"><div class="card-title">🎧 Ambient Audio</div></div>
+      <select id="dw-ambient" onchange="playAmbient(this.value)">
+        <option value="">🔇 Silence</option>
+        <option value="brown">🤎 Brown Noise — Deep Focus</option>
+        <option value="rain">🌧️ Rain</option>
+        <option value="waves">🌊 Ocean Waves</option>
+      </select>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Quick Presets</div></div>
+      <div class="preset-grid" id="preset-grid"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Session Timer</div></div>
+        <div class="tabs" style="margin-bottom:14px">
+          <div class="tab active" data-tab="dw-pomo">Pomodoro</div>
+          <div class="tab" data-tab="dw-free">Free Form</div>
+        </div>
+        <div id="dw-pomo" class="tab-content">
+          <div class="timer-ring">
+            <svg viewBox="0 0 200 200"><circle class="timer-ring-bg" cx="100" cy="100" r="90"/><circle class="timer-ring-fill" id="dw-ring" cx="100" cy="100" r="90"/></svg>
+            <div class="timer-inner">
+              <div class="timer-time" id="dw-timer">25:00</div>
+              <div class="timer-phase" id="dw-phase">WORK</div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button class="timer-btn timer-btn-secondary" onclick="dwReset()">↺</button>
+            <button class="timer-btn timer-btn-primary" id="dw-start-btn" onclick="dwToggle()">▶</button>
+            <button class="timer-btn timer-btn-secondary" onclick="dwFullscreen()" title="Fullscreen">⛶</button>
+          </div>
+          <div class="form-row"><label>Work (min)</label><input type="number" id="dw-work" value="25" min="1" max="120" onchange="dwReset()"></div>
+          <div class="form-row"><label>Break (min)</label><input type="number" id="dw-break" value="5" min="1" max="30" onchange="dwReset()"></div>
+        </div>
+        <div id="dw-free" class="tab-content" style="display:none">
+          <div class="timer-inner" style="position:relative;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <div class="timer-time" id="dw-free-timer">00:00</div>
+          </div>
+          <div class="timer-controls">
+            <button class="timer-btn timer-btn-secondary" onclick="dwFreeReset()">↺</button>
+            <button class="timer-btn timer-btn-primary" id="dw-free-btn" onclick="dwFreeToggle()">▶</button>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:10px"><label>Session label</label><input type="text" id="dw-label" placeholder="What are you working on?"></div>
+        <div class="form-row"><label>Link task (optional — accrues minutes to goal)</label><select id="dw-task-link"><option value="">— none —</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Daily Target</div></div>
+        <div class="form-row"><label>Target hrs/day</label><input type="number" id="dw-target" value="4" min="1" max="16" onchange="saveDwTarget()"></div>
+        <div style="margin:10px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today</span><span id="dw-prog-label">0/4h</span></div>
+          <div class="progress-track"><div class="fill" id="dw-prog-fill" style="background:var(--violet);width:0%"></div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="card-title" style="margin-bottom:10px">Session Log</div>
+        <div id="dw-log" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-header">
+        <div class="card-title">Work History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="dw-hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHeatmaps()"></div>
+      </div>
+      <div class="heatmap" id="dw-heatmap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ MEDITATION ═══ -->
+<div class="page" id="page-meditation">
+  <div class="page-header" id="hdr-meditation">
+    <div class="page-header-inner">
+      <div class="page-title-wrap">
+        <div class="page-subtitle">Mindfulness & Calm</div>
+        <div class="page-title">Meditation</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openAddMedTimer()">+ Timer</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="med-tab-timer">🧘 Timer</div>
+      <div class="tab" data-tab="med-tab-breath">🫁 Breathing</div>
+      <div class="tab" data-tab="med-tab-saved">⭐ Saved</div>
+      <div class="tab" data-tab="med-tab-stats">📊 Stats</div>
+    </div>
+  </div>
+
+  <!-- TIMER TAB -->
+  <div id="med-tab-timer" class="tab-content section">
+    <div class="ambient-card" style="margin-bottom:14px">
+      <div class="card-header" style="margin-bottom:8px"><div class="card-title">🎧 Ambient Sound</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <button class="med-sound-btn active" data-sound="" onclick="setMedSound(this,'')">🔇<span>Silence</span></button>
+        <button class="med-sound-btn" data-sound="brown" onclick="setMedSound(this,'brown')">🤎<span>Focus</span></button>
+        <button class="med-sound-btn" data-sound="rain" onclick="setMedSound(this,'rain')">🌧️<span>Rain</span></button>
+        <button class="med-sound-btn" data-sound="waves" onclick="setMedSound(this,'waves')">🌊<span>Waves</span></button>
+      </div>
+    </div>
+
+    <div class="med-timer-card">
+      <div class="med-timer-ring-wrap">
+        <svg class="med-ring-svg" viewBox="0 0 240 240">
+          <defs>
+            <linearGradient id="medGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#3ecfb0"/>
+              <stop offset="100%" style="stop-color:#7c6ef7"/>
+            </linearGradient>
+          </defs>
+          <circle class="timer-ring-bg" cx="120" cy="120" r="108" stroke-width="8"/>
+          <circle class="med-ring-progress" cx="120" cy="120" r="108" stroke="url(#medGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="678.6" stroke-dashoffset="0" fill="none" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 12px rgba(62,207,176,0.5))"/>
+        </svg>
+        <div class="med-timer-inner">
+          <div id="med-timer" style="font-family:'DM Mono',monospace;font-size:44px;font-weight:400;letter-spacing:1px;line-height:1">10:00</div>
+          <div id="med-phase" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-top:4px">READY</div>
+        </div>
+      </div>
+
+      <div class="timer-controls" style="justify-content:center;gap:16px;margin:20px 0 10px">
+        <button class="timer-btn timer-btn-secondary" onclick="medReset()" style="width:50px;height:50px">↺</button>
+        <button class="timer-btn" id="med-btn" onclick="medToggle()" style="width:68px;height:68px;background:linear-gradient(135deg,#3ecfb0,#7c6ef7);border:none;color:#fff;font-size:26px;box-shadow:0 6px 24px rgba(62,207,176,0.35)">▶</button>
+        <button class="timer-btn timer-btn-secondary" onclick="medSkip()" style="width:50px;height:50px" title="End & log">⏭</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 4px">
+        <div class="form-row" style="margin:0"><label>Duration (min)</label><input type="number" id="med-dur" value="10" min="1" max="180" onchange="medReset()"></div>
+        <div class="form-row" style="margin:0"><label>Daily target (min)</label><input type="number" id="med-target" value="10" min="1" onchange="saveMedTarget()"></div>
+      </div>
+      <div style="padding:12px 4px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today's progress</span><span id="med-prog-label">0 / 10 min</span></div>
+        <div class="progress-track"><div class="fill" id="med-prog-fill" style="background:var(--teal);width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-header"><div class="card-title">Quick Presets</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="med-quick-presets">
+        <button class="med-preset-quick" onclick="setMedDur(5)">5 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(10)">10 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(15)">15 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(20)">20 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(30)">30 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(45)">45 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(60)">1 hr</button>
+        <button class="med-preset-quick" onclick="setMedDur(90)">90 min</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BREATHING TAB -->
+  <div id="med-tab-breath" class="tab-content section" style="display:none">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Breathing Techniques</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="breath-technique-list">
+        <div class="breath-technique-btn active" data-in="4" data-hold1="4" data-out="4" data-hold2="4" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">📦 Box Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">4s · 4s · 4s · 4s — Stress relief & focus</div>
+        </div>
+        <div class="breath-technique-btn" data-in="4" data-hold1="7" data-out="8" data-hold2="0" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">🌙 4-7-8 Relaxing</div>
+          <div style="font-size:11px;color:var(--text3)">4s · 7s · 8s · 0s — Sleep & anxiety</div>
+        </div>
+        <div class="breath-technique-btn" data-in="6" data-hold1="0" data-out="6" data-hold2="0" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">⚖️ Equal Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">6s · 0s · 6s · 0s — Balance & calm</div>
+        </div>
+        <div class="breath-technique-btn" data-in="2" data-hold1="1" data-out="4" data-hold2="1" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">⚡ Energising Breath</div>
+          <div style="font-size:11px;color:var(--text3)">2s · 1s · 4s · 1s — Wake up & energise</div>
+        </div>
+        <div class="breath-technique-btn" data-in="5" data-hold1="2" data-out="5" data-hold2="2" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">💎 Coherence Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">5s · 2s · 5s · 2s — Heart coherence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-title">⚙️ Custom Timing</div>
+        <button class="btn btn-xs btn-primary" onclick="saveBreathPreset()">Save Preset</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row" style="margin:0"><label>Breathe In (s)</label><input type="number" id="breath-in" value="4" min="1" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Hold In (s)</label><input type="number" id="breath-hold1" value="4" min="0" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Breathe Out (s)</label><input type="number" id="breath-out" value="4" min="1" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Hold Out (s)</label><input type="number" id="breath-hold2" value="4" min="0" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="form-row" style="margin:0"><label>Cycles (0 = infinite)</label><input type="number" id="breath-cycles" value="0" min="0" max="100"></div>
+      </div>
+    </div>
+
+    <div class="med-breath-card">
+      <div class="breath-circle-wrap">
+        <div class="breath-outer-ring" id="breath-outer-ring"></div>
+        <div class="breath-circle" id="breath-circle">
+          <div id="breath-phase-label" style="font-size:15px;font-weight:600;color:#fff;text-align:center;line-height:1.3">Ready</div>
+          <div id="breath-count" style="font-family:'DM Mono',monospace;font-size:32px;font-weight:400;color:rgba(255,255,255,0.9);margin-top:2px">—</div>
+        </div>
+      </div>
+      <div id="breath-cycle-info" style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">Press Start to begin</div>
+      <div style="display:flex;justify-content:center;gap:14px">
+        <button class="timer-btn timer-btn-secondary" onclick="breathReset()" style="width:50px;height:50px">↺</button>
+        <button class="timer-btn" id="breath-btn" onclick="breathToggle()" style="width:68px;height:68px;background:linear-gradient(135deg,#7c6ef7,#3ecfb0);border:none;color:#fff;font-size:26px;box-shadow:0 6px 24px rgba(124,110,247,0.35)">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAVED TIMERS TAB -->
+  <div id="med-tab-saved" class="tab-content section" style="display:none">
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="openAddMedTimer()">+ New Timer</button>
+      <span style="font-size:12px;color:var(--text3)">Save custom meditation sessions</span>
+    </div>
+    <div id="saved-timers-list"></div>
+  </div>
+
+  <!-- STATS TAB -->
+  <div id="med-tab-stats" class="tab-content section" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="med-streak">0</div><div class="stat-label">Streak</div></div>
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="med-today">0</div><div class="stat-label">Today min</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="med-total-sessions">0</div><div class="stat-label">Sessions</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-title">Meditation History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="med-hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHeatmaps()"></div>
+      </div>
+      <div class="heatmap" id="med-heatmap"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Session Log</div></div>
+      <div id="med-log" style="max-height:260px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ FITNESS ════ -->
+<div class="page" id="page-fitness">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Fitness</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openAddModality()">+ Modality</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Modalities</div></div>
+      <div id="fit-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Recent sessions</div></div>
+      <div id="fit-log"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="m-fit-modality" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="fm-title">Add Modality</div>
+  <div class="form-row"><label>Name</label><input type="text" id="fm-name" autocapitalize="sentences" enterkeyhint="done"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Type</label><select id="fm-type"><option value="weightlifting">🏋️ Weightlifting</option><option value="cardio">🏃 Cardio</option><option value="martial">🥋 Martial arts</option><option value="custom">✨ Custom</option></select></div>
+    <div class="form-row"><label>Icon</label><input type="text" id="fm-icon" maxlength="2"></div>
+  </div>
+  <input type="hidden" id="fm-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveModality()">Save</button>
+    <button class="btn" onclick="closeModal('m-fit-modality')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-fit-log" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="fit-log-title">Log session</div>
+  <input type="hidden" id="fit-log-modid"><input type="hidden" id="fit-log-type">
+  <div id="fit-fields-weight" style="display:none">
+    <div class="form-grid3">
+      <div class="form-row"><label>Sets</label><input type="number" id="fit-sets" inputmode="numeric"></div>
+      <div class="form-row"><label>Reps</label><input type="number" id="fit-reps" inputmode="numeric"></div>
+      <div class="form-row"><label>Weight</label><input type="number" id="fit-weight" inputmode="decimal" step="0.5"></div>
+    </div>
+  </div>
+  <div id="fit-fields-cardio" style="display:none">
+    <div class="form-row"><label>Distance (km)</label><input type="number" id="fit-distance" inputmode="decimal" step="0.1"></div>
+  </div>
+  <div id="fit-fields-martial" style="display:none">
+    <div class="form-row"><label>Rounds</label><input type="number" id="fit-rounds" inputmode="numeric"></div>
+  </div>
+  <div id="fit-fields-generic">
+    <div class="form-row"><label>Duration (min)</label><input type="number" id="fit-duration" inputmode="numeric"></div>
+  </div>
+  <div class="form-row"><label>Notes</label><textarea id="fit-notes" rows="2"></textarea></div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveFitLog()">Log session</button>
+    <button class="btn" onclick="closeModal('m-fit-log')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- ═══════════════════════════════════════ SHOPPING ════ -->
+<div class="page" id="page-shopping">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Shopping</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="clearChecked()">Clear done</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddShop()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="ai-banner ai-banner-teal" id="shop-ai-banner">
+      <div class="ai-banner-content">
+        <div class="free-badge">✦ Free AI</div>
+        <div style="font-size:15px;font-weight:700;color:var(--teal);margin-bottom:8px">🥦 AI Healthy Shopping List</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="genShoppingList()" id="shop-gen-btn" style="background:var(--teal);border-color:var(--teal)">🤖 Generate List</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearAllShop()">🗑 Clear all</button>
+          <span id="shop-status" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="sort-bar">
+      <label>Sort</label><select id="shop-sort" onchange="renderShop()"><option value="category">Category</option><option value="name">Name</option></select>
+      <label>Show</label><select id="shop-filter" onchange="renderShop()"><option value="all">All</option><option value="unchecked">Unchecked</option><option value="checked">Checked</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="shop-total">0</div><div class="stat-label">Items</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="shop-done">0</div><div class="stat-label">In Basket</div></div>
+    </div>
+    <div id="shop-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ JOURNAL ════ -->
+<div class="page" id="page-journal">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Journal</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openAddJournal()">+ Add Entry</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sort-bar">
+      <label>Sort</label><select id="j-sort" onchange="renderJournal()"><option value="desc">Newest</option><option value="asc">Oldest</option></select>
+      <label>Habit</label><select id="j-habit-filter" onchange="renderJournal()"><option value="">All</option></select>
+      <label>Type</label><select id="j-type-filter" onchange="renderJournal()"><option value="">All</option><option value="avoided">Avoided</option><option value="indulged">Indulged</option></select>
+    </div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ PROFILE ════ -->
+<div class="page" id="page-profile">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Profile & AI</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="ai-banner ai-banner-violet" id="ai-plan-banner">
+      <div class="ai-banner-content">
+        <div class="free-badge">✦ Free AI · No account needed</div>
+        <div style="font-size:15px;font-weight:700;color:var(--violet);margin-bottom:6px">✨ AI Plan Generator</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">Fill in your profile and get a personalised self-improvement plan.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="generatePlan()" id="gen-btn" style="background:var(--violet);border-color:var(--violet)">✨ Generate My Plan</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearPlan()">🗑 Clear plan</button>
+          <span id="gen-status" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <div id="ai-thinking" class="ai-thinking"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Thinking…</span></div>
+        <div id="ai-stream-box" class="ai-stream-box"></div>
+        <div id="ai-plan-summary" style="display:none;margin-top:12px;padding:14px;background:rgba(0,0,0,0.25);border-radius:var(--r-sm);font-size:13px;line-height:1.7;color:var(--text2);border-left:3px solid var(--violet)"></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Personal Info</div></div>
+        <div class="form-row"><label>Name</label><input type="text" id="p-name" autocomplete="given-name" autocapitalize="words" enterkeyhint="next"></div>
+        <div class="form-row"><label>Weight (kg)</label><input type="number" id="p-weight" inputmode="decimal" autocomplete="off" enterkeyhint="next"></div>
+        <div class="form-row"><label>Wake time</label><input type="time" id="p-wake" value="06:30"></div>
+        <div class="form-row"><label>Bed time</label><input type="time" id="p-bed" value="22:30"></div>
+        <div class="form-row"><label>Current sleep (hrs)</label><input type="number" id="p-sleep-now" value="7" step="0.5"></div>
+        <div class="form-row"><label>Sleep target (hrs)</label><input type="number" id="p-sleep-target" value="8" step="0.5"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Training Routines</div></div>
+        <div id="routines-list" style="margin-bottom:10px"></div>
+        <button class="btn btn-sm" onclick="openAddRoutine()">+ Add Routine</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">✅ Positive habits to build</div></div>
+      <div class="check-grid" id="pos-checks"></div>
+      <div class="form-row" style="margin-top:10px"><label>Add custom (one per line)</label><textarea id="pos-custom"></textarea></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">❌ Negative habits to stop</div></div>
+      <div class="check-grid" id="neg-checks"></div>
+      <div class="form-row" style="margin-top:10px"><label>Add custom (one per line)</label><textarea id="neg-custom"></textarea></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">🎯 Long-term goals</div></div>
+      <textarea id="p-goals" rows="4" placeholder="List your goals and ambitions…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">🥗 Dietary preferences</div></div>
+      <div class="form-row"><label>Diet style</label>
+        <select id="p-diet"><option value="balanced">Balanced</option><option value="highprotein">High protein</option><option value="lowcarb">Low carb</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="mediterranean">Mediterranean</option><option value="keto">Keto</option></select>
+      </div>
+      <div class="form-row"><label>Allergies / avoid</label><input type="text" id="p-allergies" autocapitalize="none" enterkeyhint="done"></div>
+      <div class="form-row"><label>Meals per day</label><input type="number" id="p-meals" value="3" min="2" max="6"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ SETTINGS ════ -->
+<div class="page" id="page-settings">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Settings</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Data</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="exportData()">📤 Export JSON</button>
+        <button class="btn" onclick="document.getElementById('import-file').click()">📥 Import JSON</button>
+        <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');location.reload()}">🗑 Reset All</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Journal passcode</div></div>
+      <div id="passcode-status" style="font-size:12px;color:var(--text3);margin-bottom:10px"></div>
+      <div id="passcode-set" style="display:none">
+        <div class="form-row"><label>New passcode (min 4 chars)</label><input type="password" id="pc-new" autocomplete="new-password"></div>
+        <div class="form-row"><label>Confirm</label><input type="password" id="pc-confirm" autocomplete="new-password"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn btn-primary" onclick="applySetPasscode()">Enable encryption</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">Enabling will encrypt all existing journal entries. Losing your passcode means losing the journal — there's no recovery.</div>
+      </div>
+      <div id="passcode-manage" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="lockJournalAction()">🔒 Lock now</button>
+          <button class="btn btn-danger" onclick="applyResetPasscode()">Reset passcode (wipes journal)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">AI Features</div></div>
+      <div class="setting-row">
+        <input type="checkbox" class="setting-check" id="ai-toggle" onchange="toggleAI()">
+        <div><div style="font-size:14px;font-weight:500">Enable AI features</div><div style="font-size:12px;color:var(--text3);margin-top:3px">Powered by Pollinations AI · free, no account needed</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Custom Categories</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div class="card-title" style="margin-bottom:8px">Shopping</div>
+          <div id="custom-shop-cats"></div>
+          <div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="new-shop-cat" placeholder="New category" style="flex:1"><button class="btn btn-sm btn-primary" onclick="addCustomCat('shop')">+</button></div>
+        </div>
+        <div>
+          <div class="card-title" style="margin-bottom:8px">Projects</div>
+          <div id="custom-proj-cats"></div>
+          <div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="new-proj-cat" placeholder="New category" style="flex:1"><button class="btn btn-sm btn-primary" onclick="addCustomCat('proj')">+</button></div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="card-title" style="margin-bottom:8px">Goals</div>
+        <div id="custom-goal-cats"></div>
+        <div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="new-goal-cat" placeholder="New category" style="flex:1"><button class="btn btn-sm btn-primary" onclick="addCustomCat('goal')">+</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">About</div></div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.7"><strong style="color:var(--text)">FocusFlow</strong> v10.0 — Premium self-improvement dashboard with free AI.<br>All data stored locally on your device.</p>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ══ Mobile Nav ══ -->
+<nav class="mob-nav">
+  <div class="mob-nav-inner" id="mobnav">
+    <div class="mob-nav-item active" data-page="dashboard"><div class="mob-icon">🏠</div>Home</div>
+    <div class="mob-nav-item" data-page="habits"><div class="mob-icon">✅</div>Habits</div>
+    <div class="mob-nav-item" data-page="deepwork"><div class="mob-icon">🧠</div>Focus</div>
+    <div class="mob-nav-item" data-page="meditation"><div class="mob-icon">🧘</div>Meditate</div>
+    <div class="mob-nav-item" data-page="projects"><div class="mob-icon">📁</div>Work</div>
+    <div class="mob-nav-item" data-page="profile"><div class="mob-icon">👤</div>Profile</div>
+  </div>
+</nav>
+
+<!-- ══ Modals ══ -->
+<div class="modal-overlay" id="m-med-timer" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div class="modal-title" id="m-med-timer-title" style="margin:0">New Meditation Timer</div><button class="btn-icon" onclick="closeModal('m-med-timer')">✕</button></div>
+  <input type="hidden" id="med-timer-edit-id">
+  <div class="form-row"><label>Timer Name</label><input type="text" id="mt-name" placeholder="e.g. Morning Calm" autocapitalize="sentences" enterkeyhint="next"></div>
+  <div class="form-row"><label>Icon</label><input type="text" id="mt-icon" placeholder="🧘" maxlength="4"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Duration (min)</label><input type="number" id="mt-dur" value="10" min="1" max="180"></div>
+    <div class="form-row"><label>Target/day (min)</label><input type="number" id="mt-target" value="10" min="1"></div>
+  </div>
+  <div class="form-row"><label>Ambient Sound</label>
+    <select id="mt-sound">
+      <option value="">🔇 Silence</option>
+      <option value="brown">🤎 Brown Noise</option>
+      <option value="rain">🌧️ Rain</option>
+      <option value="waves">🌊 Ocean Waves</option>
+    </select>
+  </div>
+  <div class="form-row"><label>Notes</label><textarea id="mt-notes" placeholder="Intention, focus…" rows="2"></textarea></div>
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveMedTimerPreset()">Save Timer</button>
+    <button class="btn" onclick="closeModal('m-med-timer')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-breath-preset" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">Save Breathing Preset</div>
+  <div class="form-row"><label>Preset Name</label><input type="text" id="bp-name" placeholder="e.g. My Box Breath" autocapitalize="sentences"></div>
+  <div style="padding:12px;background:var(--bg3);border-radius:var(--r-sm);margin-bottom:14px;font-size:13px;color:var(--text2)" id="bp-preview"></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" style="flex:1" onclick="confirmSaveBreathPreset()">Save</button>
+    <button class="btn" onclick="closeModal('m-breath-preset')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-project" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-project-title">New Project</div>
+  <div class="form-row"><label>Name</label><input type="text" id="proj-name"></div>
+  <div class="form-row"><label>Description</label><textarea id="proj-desc" rows="2"></textarea></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Due date</label><input type="date" id="proj-due"></div>
+    <div class="form-row"><label>Category</label><select id="proj-cat"></select></div>
+  </div>
+  <div class="form-row"><label>Colour</label>
+    <div class="swatches" id="proj-swatches">
+      <div class="swatch selected" data-c="#7c6ef7" style="background:#7c6ef7"></div>
+      <div class="swatch" data-c="#3ecfb0" style="background:#3ecfb0"></div>
+      <div class="swatch" data-c="#5cc87a" style="background:#5cc87a"></div>
+      <div class="swatch" data-c="#e8b84b" style="background:#e8b84b"></div>
+      <div class="swatch" data-c="#f06b6b" style="background:#f06b6b"></div>
+      <div class="swatch" data-c="#f0904a" style="background:#f0904a"></div>
+    </div>
+  </div>
+  <input type="hidden" id="proj-color-val" value="#7c6ef7"><input type="hidden" id="proj-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveProject()">Save Project</button>
+    <button class="btn" onclick="closeModal('m-project')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-task" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-task-title">Add Task</div>
+  <div class="form-row"><label>Task name</label><input type="text" id="task-name" autocapitalize="sentences" enterkeyhint="next"></div>
+  <div class="form-row"><label>Notes</label><textarea id="task-notes" rows="2"></textarea></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Priority</label><select id="task-priority"><option value="high">🔴 High</option><option value="medium" selected>🟡 Medium</option><option value="low">🟢 Low</option></select></div>
+    <div class="form-row"><label>Due date</label><input type="date" id="task-due"></div>
+  </div>
+  <div class="form-row"><label>Project</label><select id="task-project"></select></div>
+  <div class="form-row"><label>Link to goal (optional)</label><select id="task-goal"><option value="">— none —</option></select></div>
+  <input type="hidden" id="task-edit-id"><input type="hidden" id="task-parent-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveTask()">Save Task</button>
+    <button class="btn" onclick="closeModal('m-task')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-habit-journal" style="display:none"><div class="modal" style="max-width:380px">
+  <div class="modal-handle"></div>
+  <div class="modal-title">✨ <span id="hj-habit-name"></span> — reflection</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:6px">How did that feel? (optional)</div>
+  <textarea id="hj-text" class="habit-journal-note" placeholder="One sentence is enough…"></textarea>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveHabitJournal()">Save</button>
+    <button class="btn" onclick="dismissHabitJournal()">Skip</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-habit" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-habit-title">Add Habit</div>
+  <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Time block</label><select id="habit-block"><option value="morning">☀️ Morning</option><option value="afternoon">🌤 Afternoon</option><option value="evening">🌙 Evening</option></select></div>
+    <div class="form-row"><label>Icon (emoji)</label><input type="text" id="habit-icon" maxlength="2"></div>
+    <div class="form-row"><label>Mode</label><select id="habit-mode" onchange="toggleCounterFields()"><option value="binary">Binary (done/not done)</option><option value="counter">Counter (N per day)</option></select></div>
+  </div>
+  <div id="habit-counter-fields" style="display:none">
+    <div class="form-grid">
+      <div class="form-row"><label>Daily target</label><input type="number" id="habit-target" min="1" placeholder="e.g. 8"></div>
+      <div class="form-row"><label>Unit</label><input type="text" id="habit-unit" placeholder="glasses, pages…"></div>
+      <div class="form-row"><label>Step per tap</label><input type="number" id="habit-step" min="1" placeholder="1"></div>
+      <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-cumulative"> Cumulative (life-total)</label></div>
+    </div>
+  </div>
+  <input type="hidden" id="habit-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveHabit()">Save</button>
+    <button class="btn" onclick="closeModal('m-habit')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-goal" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-goal-title">Add Goal</div>
+  <div class="form-row"><label>Goal title</label><input type="text" id="goal-name" autocapitalize="sentences" enterkeyhint="done"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Category</label><select id="goal-cat"></select></div>
+    <div class="form-row"><label>Target date</label><input type="date" id="goal-date"></div>
+    <div class="form-row"><label>Focus minute target (optional)</label><input type="number" id="goal-minutes" min="0" placeholder="e.g. 600"></div>
+  </div>
+  <div class="form-row"><label>Milestones (one per line)</label><textarea id="goal-milestones" rows="5" placeholder="Step 1&#10;Step 2&#10;Step 3"></textarea></div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+    <button class="btn btn-sm btn-gold" onclick="aiGoalMilestones()">✨ AI Milestones</button>
+    <span id="ai-ms-status" style="font-size:11px;color:var(--text3)"></span>
+  </div>
+  <input type="hidden" id="goal-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveGoal()">Save</button>
+    <button class="btn" onclick="closeModal('m-goal')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-chore" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-chore-title">Add Chore</div>
+  <div class="form-row"><label>Chore name</label><input type="text" id="chore-name"></div>
+  <div class="form-row"><label>Day</label><select id="chore-day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div>
+  <input type="hidden" id="chore-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveChore()">Save</button>
+    <button class="btn" onclick="closeModal('m-chore')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-preset" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">Add Preset</div>
+  <div class="form-row"><label>Label</label><input type="text" id="preset-label"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Duration (min)</label><input type="number" id="preset-mins" value="45" min="1" max="480"></div>
+    <div class="form-row"><label>Icon (emoji)</label><input type="text" id="preset-icon" maxlength="2"></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="addPreset()">Add Preset</button>
+    <button class="btn" onclick="closeModal('m-preset')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-shop" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-shop-title">Add Item</div>
+  <div class="form-row"><label>Item name</label><input type="text" id="shop-name"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Quantity</label><input type="text" id="shop-qty"></div>
+    <div class="form-row"><label>Price (£)</label><input type="number" id="shop-price" step="0.01" min="0"></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label>Category</label><select id="shop-cat"></select></div>
+    <div class="form-row"><label>Supermarket</label><input type="text" id="shop-super"></div>
+  </div>
+  <input type="hidden" id="shop-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveShop()">Save</button>
+    <button class="btn" onclick="closeModal('m-shop')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-routine" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-routine-title">Add Routine</div>
+  <div class="form-row"><label>Name</label><input type="text" id="routine-name"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Start</label><input type="time" id="routine-start" value="07:00"></div>
+    <div class="form-row"><label>End</label><input type="time" id="routine-end" value="08:00"></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label>Icon</label><input type="text" id="routine-icon" maxlength="2"></div>
+    <div class="form-row"><label>Notes</label><input type="text" id="routine-notes"></div>
+  </div>
+  <div class="form-row"><label>Training days</label>
+    <div class="days-row" id="routine-days">
+      <span class="day-dot" data-d="Mon">M</span><span class="day-dot" data-d="Tue">T</span><span class="day-dot" data-d="Wed">W</span><span class="day-dot" data-d="Thu">T</span><span class="day-dot" data-d="Fri">F</span><span class="day-dot" data-d="Sat">S</span><span class="day-dot" data-d="Sun">S</span>
+    </div>
+  </div>
+  <input type="hidden" id="routine-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveRoutine()">Save</button>
+    <button class="btn" onclick="closeModal('m-routine')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-bh" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-bh-title">Log Habit</div>
+  <div class="type-toggle">
+    <button class="type-btn avoided active" id="bh-avoided-btn" onclick="setBhType('avoided')">✅ Avoided it</button>
+    <button class="type-btn indulged" id="bh-indulged-btn" onclick="setBhType('indulged')">❌ Indulged</button>
+  </div>
+  <div class="form-row"><label>Date & time</label><input type="datetime-local" id="bh-dt"></div>
+  <div class="form-row"><label>Journal entry</label><textarea id="bh-text" rows="5" placeholder="Describe triggers, feelings, context…"></textarea></div>
+  <input type="hidden" id="bh-habit-id"><input type="hidden" id="bh-type" value="avoided"><input type="hidden" id="bh-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveBH()">Save Entry</button>
+    <button class="btn" onclick="closeModal('m-bh')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-journal" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">Journal Entry</div>
+  <div class="form-row"><label>Habit</label><select id="j-habit-sel"></select></div>
+  <div class="type-toggle">
+    <button class="type-btn avoided active" id="j-avoided-btn" onclick="setJType('avoided')">✅ Avoided</button>
+    <button class="type-btn indulged" id="j-indulged-btn" onclick="setJType('indulged')">❌ Indulged</button>
+  </div>
+  <div class="form-row"><label>Date & time</label><input type="datetime-local" id="j-dt"></div>
+  <div class="form-row"><label>Entry</label><textarea id="j-text" rows="5" placeholder="Describe triggers, feelings, context…"></textarea></div>
+  <input type="hidden" id="j-type" value="avoided"><input type="hidden" id="j-edit-id">
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveJournal()">Save</button>
+    <button class="btn" onclick="closeModal('m-journal')">Cancel</button>
+  </div>
+</div></div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

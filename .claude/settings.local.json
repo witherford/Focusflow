@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm test *)",
+      "Bash(npx pwa-assets-generator *)",
+      "Bash(node scripts/decode-icons.mjs \"C:/Users/withe/.claude/projects/C--Users-withe-OneDrive-AI-Claude-Claude-projects-Focus-flow-Test-app/63f9dd2d-57ac-4870-8c9e-c7d9db0cc6d8/tool-results/mcp-Claude_Preview-preview_eval-1776800170682.txt\" public)"
+    ]
+  }
+}

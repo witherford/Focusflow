@@ -1,0 +1,142 @@
+name: iOS Release Build
+
+# Builds + signs + uploads FocusFlow to TestFlight without requiring a local Mac.
+# Runs on GitHub's macos-latest runners (free tier: 2000 min/mo, macOS minutes count 10x).
+#
+# One-time setup (no Mac required):
+#   1. Enroll in Apple Developer Program ($99/yr).
+#   2. In App Store Connect → Users & Access → Keys → create an API key with "App Manager" role.
+#      Download the .p8 file. Record Key ID and Issuer ID.
+#   3. In Apple Developer portal → Certificates → create a Distribution certificate using fastlane match
+#      (this workflow does it for you the first run) OR use Xcode Cloud's managed signing.
+#   4. Create an App ID (bundle id: com.focusflow.app) and a TestFlight-capable app record in ASC.
+#
+# Repository secrets required:
+#   APP_STORE_CONNECT_API_KEY_ID        - e.g. ABC123XYZ
+#   APP_STORE_CONNECT_API_ISSUER_ID     - UUID from ASC
+#   APP_STORE_CONNECT_API_KEY_P8        - contents of AuthKey_XXXX.p8 (paste the full PEM)
+#   MATCH_GIT_URL                       - private git repo URL for fastlane match certificate storage
+#   MATCH_GIT_TOKEN                     - PAT for that repo
+#   MATCH_PASSWORD                      - passphrase that encrypts match's stored certs
+#   APPLE_TEAM_ID                       - 10-char team id from developer.apple.com
+#
+# Trigger: version tag v*.*.* or manual dispatch.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    env:
+      APP_ID: com.focusflow.app
+      SCHEME: App
+      XCODE_PROJECT: ios/App/App.xcworkspace
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Ruby (for fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Install fastlane
+        run: gem install fastlane cocoapods -N
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build
+
+      - name: Add iOS platform if missing
+        run: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Capacitor sync
+        run: npx cap sync ios
+
+      - name: Pod install
+        working-directory: ios/App
+        run: pod install --repo-update
+
+      - name: Write App Store Connect API key
+        env:
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+
+      - name: Fetch / create signing cert via fastlane match
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: /Users/runner/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+        run: |
+          fastlane match appstore \
+            --app_identifier "$APP_ID" \
+            --team_id "$APPLE_TEAM_ID" \
+            --readonly false \
+            --api_key_path <(cat <<EOF
+          { "key_id": "$APP_STORE_CONNECT_API_KEY_KEY_ID",
+            "issuer_id": "$APP_STORE_CONNECT_API_KEY_ISSUER_ID",
+            "key": "$(cat $APP_STORE_CONNECT_API_KEY_KEY_FILEPATH)",
+            "in_house": false }
+          EOF
+          )
+
+      - name: Build + archive + upload to TestFlight
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: /Users/runner/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+        working-directory: ios/App
+        run: |
+          fastlane gym \
+            --workspace App.xcworkspace \
+            --scheme App \
+            --export_method app-store \
+            --output_directory "$GITHUB_WORKSPACE/build" \
+            --output_name FocusFlow.ipa \
+            --include_symbols true \
+            --export_options "{\"teamID\":\"$APPLE_TEAM_ID\",\"signingStyle\":\"manual\"}"
+
+          fastlane pilot upload \
+            --ipa "$GITHUB_WORKSPACE/build/FocusFlow.ipa" \
+            --api_key_path <(cat <<EOF
+          { "key_id": "$APP_STORE_CONNECT_API_KEY_KEY_ID",
+            "issuer_id": "$APP_STORE_CONNECT_API_KEY_ISSUER_ID",
+            "key": "$(cat $APP_STORE_CONNECT_API_KEY_KEY_FILEPATH)",
+            "in_house": false }
+          EOF
+          ) \
+            --skip_waiting_for_build_processing true
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: focusflow-ipa
+          path: build/FocusFlow.ipa
+          if-no-files-found: error
