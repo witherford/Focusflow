@@ -29,8 +29,13 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run build
+      - name: Install deps
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Show dist contents on failure
+        if: failure()
+        run: ls -la dist/ || echo "no dist/"
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
