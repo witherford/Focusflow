@@ -1,6 +1,9 @@
 // Meditation — extracted from focusflow_v10.html lines 1925-2321
 import { S, today, uid, f2, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
+import { playChime } from '../../core/audio.js';
+
+const medSoundsOn = () => (S.meditation.cfg ||= { sounds: true }).sounds;
 
 const fmtSecs = s => f2(Math.floor(s / 60)) + ':' + f2(s % 60);
 let medInt = null, medRunning = false, medSecs = 0;
@@ -18,16 +21,19 @@ export function medToggle() {
   else {
     if (medSecs === 0) medSecs = medDur();
     medRunning = true; document.getElementById('med-btn').textContent = '⏸'; document.getElementById('med-phase').textContent = 'MEDITATING'; window.reqWL();
+    if (medSoundsOn()) playChime('start');
     medInt = setInterval(() => {
       medSecs--;
       const el = document.getElementById('med-timer'); if (el) el.textContent = fmtSecs(medSecs);
       const ring = document.querySelector('.med-ring-progress');
       if (ring) { const total = medDur(), circ = 678.6; ring.style.strokeDashoffset = Math.max(0, circ * (medSecs / total)); }
       updateMedProg();
-      if (medSecs <= 0) { clearInterval(medInt); medRunning = false; window.relWL(); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'COMPLETE ✓'; haptic('success'); logMed(parseInt(document.getElementById('med-dur')?.value || 10)); medSecs = 0; }
+      if (medSecs <= 0) { clearInterval(medInt); medRunning = false; window.relWL(); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'COMPLETE ✓'; haptic('success'); if (medSoundsOn()) playChime('end'); logMed(parseInt(document.getElementById('med-dur')?.value || 10)); medSecs = 0; }
     }, 1000);
   }
 }
+export function saveMedCfg() { (S.meditation.cfg ||= { sounds: true }).sounds = !!document.getElementById('med-cfg-sounds')?.checked; save(); }
+export function syncMedCfgInputs() { const el = document.getElementById('med-cfg-sounds'); if (el) el.checked = medSoundsOn(); }
 export function medReset() { clearInterval(medInt); medRunning = false; medSecs = 0; window.relWL(); const el = document.getElementById('med-timer'); if (el) el.textContent = f2(medDur() / 60) + ':00'; const ph = document.getElementById('med-phase'); if (ph) ph.textContent = 'READY'; const btn = document.getElementById('med-btn'); if (btn) btn.textContent = '▶'; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; }
 export function medSkip() { if (!medRunning && medSecs === 0) return; clearInterval(medInt); medRunning = false; window.relWL(); const elapsed = Math.max(1, Math.round((medDur() - medSecs) / 60)); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'LOGGED ✓'; logMed(elapsed); medSecs = 0; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; window.toast('Session logged: ' + elapsed + ' min ✓'); }
 export function logMed(min) { if (!S.meditation.sessions) S.meditation.sessions = []; S.meditation.sessions.push({ date: today(), min: min || parseInt(document.getElementById('med-dur')?.value || 10), ts: Date.now() }); save(); renderMedStats(); window.renderHeatmaps(); updateMedProg(); }
@@ -35,6 +41,7 @@ function updateMedProg() { const target = S.meditation.target || parseInt(docume
 export function saveMedTarget() { S.meditation.target = parseInt(document.getElementById('med-target')?.value || 10); save(); updateMedProg(); }
 
 export function renderMedStats() {
+  syncMedCfgInputs();
   const el = document.getElementById('med-log');
   if (el) {
     const sessions = [...S.meditation.sessions].reverse().slice(0, 30);
@@ -132,3 +139,4 @@ window.breathReset = breathReset;
 window.saveBreathPreset = saveBreathPreset;
 window.confirmSaveBreathPreset = confirmSaveBreathPreset;
 window.deleteBreathPreset = deleteBreathPreset;
+window.saveMedCfg = saveMedCfg;

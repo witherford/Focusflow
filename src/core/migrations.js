@@ -10,7 +10,7 @@ export function migrate_1_to_2(v1) {
   return {
     meta: { schemaVersion: 2, createdAt: src.meta?.createdAt || now, lastMigrationAt: now },
     profile: { ...base.profile, ...(src.profile || {}) },
-    habits: (src.habits || []).map(h => ({ mode: 'binary', ...h })),
+    habits: (src.habits || []).map(h => ({ mode: 'binary', journalPrompt: true, ...h })),
     habitLog: src.habitLog && typeof src.habitLog === 'object' ? src.habitLog : {},
     chores: Array.isArray(src.chores) ? src.chores : [],
     choreLog: src.choreLog && typeof src.choreLog === 'object' ? src.choreLog : {},

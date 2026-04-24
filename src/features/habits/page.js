@@ -74,14 +74,17 @@ function wireGestures(container) {
       },
     });
   });
-  // Delegate edit/delete clicks
-  container.addEventListener('click', e => {
-    const btn = e.target.closest('[data-habit-action]'); if (!btn) return;
-    e.stopPropagation();
-    const id = btn.dataset.id;
-    if (btn.dataset.habitAction === 'edit') openEditHabit(id);
-    else if (btn.dataset.habitAction === 'del') deleteHabit(id);
-  });
+  // Delegate edit/delete clicks — attach ONCE per container (idempotent).
+  if (!container._habitActionWired) {
+    container._habitActionWired = true;
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('[data-habit-action]'); if (!btn) return;
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if (btn.dataset.habitAction === 'edit') openEditHabit(id);
+      else if (btn.dataset.habitAction === 'del') deleteHabit(id);
+    });
+  }
 }
 
 function handleTap(h) {
@@ -162,6 +165,7 @@ export function openAddHabit() {
   const modeSel = document.getElementById('habit-mode'); if (modeSel) modeSel.value = 'binary';
   ['habit-target','habit-unit','habit-step'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = false;
+  const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = true;
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
@@ -178,6 +182,7 @@ export function openEditHabit(id) {
   const unitEl = document.getElementById('habit-unit'); if (unitEl) unitEl.value = h.unit || '';
   const stepEl = document.getElementById('habit-step'); if (stepEl) stepEl.value = h.incrementStep ?? '';
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = !!h.cumulative;
+  const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
@@ -196,11 +201,13 @@ export function saveHabit() {
   const unit = document.getElementById('habit-unit')?.value.trim() || undefined;
   const step = parseInt(document.getElementById('habit-step')?.value) || undefined;
   const cumulative = !!document.getElementById('habit-cumulative')?.checked;
+  const journalPrompt = document.getElementById('habit-journal-prompt')?.checked !== false;
   const data = {
     name,
     block: document.getElementById('habit-block').value,
     icon: document.getElementById('habit-icon').value || '●',
     mode,
+    journalPrompt,
   };
   if (mode === 'counter') {
     if (target) data.target = target;

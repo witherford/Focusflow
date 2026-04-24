@@ -10,7 +10,9 @@ let _currentHabitId = null;
 
 export function promptHabitJournal(habit) {
   if (!habit) return;
-  // Respect setting to disable (defaults to on).
+  // Per-habit opt-out — the habit explicitly disabled prompts.
+  if (habit.journalPrompt === false) return;
+  // Global setting to disable (defaults to on).
   if (S.settings && S.settings.habitJournalPrompt === false) return;
   _currentHabitId = habit.id;
   const m = document.getElementById('m-habit-journal'); if (!m) return;

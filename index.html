@@ -244,6 +244,12 @@
           </div>
           <div class="form-row"><label>Work (min)</label><input type="number" id="dw-work" value="25" min="1" max="120" onchange="dwReset()"></div>
           <div class="form-row"><label>Break (min)</label><input type="number" id="dw-break" value="5" min="1" max="30" onchange="dwReset()"></div>
+          <div class="sep"></div>
+          <div class="card-title" style="margin-bottom:8px;font-size:13px">Timer behaviour</div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-sounds" checked onchange="saveDwCfg()"> Start / end chimes</label></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-auto" checked onchange="saveDwCfg()"> Auto-advance into break / next work block (off = pause between phases)</label></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-announce" checked onchange="saveDwCfg()"> Voice announcements (e.g. "5 minutes remaining")</label></div>
+          <div class="form-row"><label style="font-size:12px">Announce every (min)</label><input type="number" id="dw-cfg-interval" value="5" min="1" max="60" onchange="saveDwCfg()"></div>
         </div>
         <div id="dw-free" class="tab-content" style="display:none">
           <div class="timer-inner" style="position:relative;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
@@ -347,6 +353,9 @@
       <div style="padding:12px 4px 0">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today's progress</span><span id="med-prog-label">0 / 10 min</span></div>
         <div class="progress-track"><div class="fill" id="med-prog-fill" style="background:var(--teal);width:0%"></div></div>
+      </div>
+      <div style="padding:10px 4px 0">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" id="med-cfg-sounds" checked onchange="saveMedCfg()"> Start / end chime</label>
       </div>
     </div>
 
@@ -814,9 +823,31 @@
   <div class="form-row"><label>Project</label><select id="task-project"></select></div>
   <div class="form-row"><label>Link to goal (optional)</label><select id="task-goal"><option value="">— none —</option></select></div>
   <input type="hidden" id="task-edit-id"><input type="hidden" id="task-parent-id">
-  <div style="display:flex;gap:8px;margin-top:16px">
-    <button class="btn btn-primary" style="flex:1" onclick="saveTask()">Save Task</button>
+  <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+    <button class="btn btn-primary" style="flex:1;min-width:120px" onclick="saveTask()">Save Task</button>
+    <button class="btn" onclick="saveTask(true)">Save & add another</button>
     <button class="btn" onclick="closeModal('m-task')">Cancel</button>
+  </div>
+</div></div>
+
+<div class="modal-overlay" id="m-bulk-tasks" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-bulk-tasks-title">Bulk add</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.5">
+    One task per line. Optional inline format: <code>Name | priority | YYYY-MM-DD | notes</code>.<br>
+    Or paste/import a CSV with header row: <code>name,priority,due,notes</code>.
+  </div>
+  <div class="form-row"><label>Lines</label><textarea id="bulk-tasks-text" rows="10" placeholder="Buy ingredients
+Prep workspace | high
+Draft outline | medium | 2026-05-01
+Review with team | low | | first pass only"></textarea></div>
+  <div class="form-row">
+    <label>Or import CSV / TXT file</label>
+    <input type="file" id="bulk-tasks-file" accept=".csv,.txt,text/csv,text/plain,*/*" onchange="bulkAddImportFile(event)">
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="bulkAddSubmit()">Add All</button>
+    <button class="btn" onclick="closeModal('m-bulk-tasks')">Cancel</button>
   </div>
 </div></div>
 
@@ -848,6 +879,7 @@
       <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-cumulative"> Cumulative (life-total)</label></div>
     </div>
   </div>
+  <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-journal-prompt" checked> Show reflection prompt when completed</label></div>
   <input type="hidden" id="habit-edit-id">
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn btn-primary" style="flex:1" onclick="saveHabit()">Save</button>

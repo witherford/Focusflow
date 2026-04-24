@@ -7,11 +7,19 @@ const DOUBLE_TAP_MS = 250;
 
 // Attach gesture handlers to an element. Handlers get ({event}).
 // Returns a cleanup function.
+// True if the pointer event originated on an interactive child that should
+// handle its own click (edit/delete buttons, inputs, etc.) — gestures must
+// not steal those interactions.
+const isInteractiveTarget = (e) =>
+  !!(e.target && e.target.closest && e.target.closest('[data-habit-action], button, a, input, select, textarea'));
+
 export function attachHabitGestures(el, { onTap, onDoubleTap, onLongPress } = {}) {
-  let pressTimer = null, lastTap = 0, fired = false, longFired = false;
+  let pressTimer = null, lastTap = 0, fired = false, longFired = false, skipGesture = false;
 
   const start = (e) => {
     fired = false; longFired = false;
+    skipGesture = isInteractiveTarget(e);
+    if (skipGesture) return; // let the button handle its own click
     if (onLongPress) {
       pressTimer = setTimeout(() => {
         longFired = true; fired = true;
@@ -22,6 +30,7 @@ export function attachHabitGestures(el, { onTap, onDoubleTap, onLongPress } = {}
   const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
   const end = (e) => {
     cancel();
+    if (skipGesture) { skipGesture = false; return; } // interactive child handles itself
     if (longFired) return;               // long-press consumed the interaction
     const now = Date.now();
     if (lastTap && (now - lastTap) < DOUBLE_TAP_MS && onDoubleTap) {
