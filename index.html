@@ -43,6 +43,7 @@
     <div class="nav-section">Work</div>
     <div class="nav-item" data-page="projects"><span class="nav-emoji">📁</span> Projects & Tasks</div>
     <div class="nav-item" data-page="goals"><span class="nav-emoji">🎯</span> Goals</div>
+    <div class="nav-item" data-page="insights"><span class="nav-emoji">📊</span> Insights</div>
     <div class="nav-section">Wellness</div>
     <div class="nav-item" data-page="deepwork"><span class="nav-emoji">🧠</span> Deep Work</div>
     <div class="nav-item" data-page="meditation"><span class="nav-emoji">🧘</span> Meditation</div>
@@ -73,6 +74,7 @@
       </div>
       <div class="header-actions">
         <div class="autosave-wrap" id="autosaveDot"><div class="autosave-dot" id="autosaveDotInner"></div><span id="autosaveLabel">Saved</span></div>
+        <button class="menu-btn" aria-label="Search" onclick="openPalette()">🔍</button>
         <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
       </div>
     </div>
@@ -85,11 +87,16 @@
       <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="s-streak">0</div><div class="stat-label">Streak</div></div>
     </div>
     <div id="dash-schedule" style="margin-bottom:14px"></div>
+    <div id="dash-up-next" style="margin-bottom:14px"></div>
+    <div id="dash-quickstart" style="margin-bottom:14px"></div>
+    <div id="dash-tasks-due" style="margin-bottom:14px"></div>
+    <div id="dash-heatstrip" style="margin-bottom:14px"></div>
     <div id="dash-goals" style="margin-bottom:14px"></div>
     <div id="dash-priorities" style="margin-bottom:14px"></div>
     <div id="dash-bad-habits" style="margin-bottom:14px"></div>
     <div id="dash-timeblocks"></div>
   </div>
+  <button class="fab" id="quickCaptureFab" aria-label="Quick capture" onclick="openQuickCapture()">＋</button>
 </div>
 
 <!-- ═══════════════════════════════════════ HABITS ════════ -->
@@ -194,6 +201,32 @@
     </div>
   </div>
   <div class="section"><div id="goals-list"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════ INSIGHTS ═════ -->
+<div class="page" id="page-insights">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Trends & review</div><div class="page-title">Insights</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="runWeeklyReview()">✨ Weekly review</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-hab-week">0%</div><div class="stat-label">Habits · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-focus-week">0h</div><div class="stat-label">Focus · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="ins-med-week">0</div><div class="stat-label">Med min · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="ins-tasks-week">0</div><div class="stat-label">Tasks · 7d</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Habit completion · 8 weeks</div></div><div id="ins-hab-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Deep work · 30 days</div></div><div id="ins-dw-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Goals progress</div></div><div id="ins-goals"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Fitness volume · weightlifting</div></div><div id="ins-fit-chart"></div></div>
+    <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════ DEEP WORK ════ -->
@@ -670,12 +703,35 @@
   <div class="section">
     <div class="card" style="margin-bottom:14px">
       <div class="card-header"><div class="card-title">Data</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="exportData()">📤 Export JSON</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-primary" onclick="downloadBackup()">📤 Download backup</button>
         <button class="btn" onclick="document.getElementById('import-file').click()">📥 Import JSON</button>
-        <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');location.reload()}">🗑 Reset All</button>
+        <button class="btn" onclick="snapshotNow()">💾 Snapshot now</button>
+        <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');localStorage.removeItem('ff:v2:core');location.reload()}">🗑 Reset All</button>
         <input type="file" id="import-file" accept="application/json,text/plain,.json,.txt,*/*" style="display:none" onchange="importData(event)">
       </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Recent daily snapshots (kept in-device, last 7)</div>
+      <div id="backup-list"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">🔔 Reminders</div></div>
+      <div class="setting-row">
+        <input type="checkbox" class="setting-check" id="rem-enabled" onchange="applyToggleReminders()">
+        <div><div style="font-size:14px;font-weight:500">Enable reminders</div><div style="font-size:12px;color:var(--text3);margin-top:3px">Habit / chore / journal nudges at chosen times</div></div>
+      </div>
+      <div class="form-grid" style="margin-top:10px">
+        <div class="form-row"><label>Morning</label><input type="time" id="rem-morning"></div>
+        <div class="form-row"><label>Afternoon</label><input type="time" id="rem-afternoon"></div>
+        <div class="form-row"><label>Evening</label><input type="time" id="rem-evening"></div>
+        <div class="form-row"><label>Journal nudge</label><input type="time" id="rem-journal-time"></div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="rem-habits"> Habits</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="rem-chores"> Chores</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="rem-journal"> Journal nudge</label>
+      </div>
+      <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="applyReminderSettings()">Save schedule</button></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -879,6 +935,7 @@ Review with team | low | | first pass only"></textarea></div>
       <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-cumulative"> Cumulative (life-total)</label></div>
     </div>
   </div>
+  <div class="form-row"><label>Link to goal (optional)</label><select id="habit-goal"><option value="">— none —</option></select></div>
   <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-journal-prompt" checked> Show reflection prompt when completed</label></div>
   <input type="hidden" id="habit-edit-id">
   <div style="display:flex;gap:8px;margin-top:16px">
@@ -1007,6 +1064,41 @@ Review with team | low | | first pass only"></textarea></div>
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn btn-primary" style="flex:1" onclick="saveJournal()">Save</button>
     <button class="btn" onclick="closeModal('m-journal')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Quick Capture modal -->
+<div class="modal-overlay" id="m-quick-capture" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">⚡ Quick capture</div>
+  <div class="form-row">
+    <label>Type</label>
+    <select id="qc-type" onchange="qcUpdateFields()">
+      <option value="task">📋 Task</option>
+      <option value="habit-tick">✅ Tick a habit</option>
+      <option value="journal">📓 Journal note</option>
+      <option value="shop">🛒 Shopping item</option>
+    </select>
+  </div>
+  <div id="qc-task-fields">
+    <div class="form-row"><label>Task</label><input type="text" id="qc-task-name" autocapitalize="sentences" enterkeyhint="done" placeholder="What needs doing?"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Priority</label><select id="qc-task-priority"><option value="high">🔴 High</option><option value="medium" selected>🟡 Med</option><option value="low">🟢 Low</option></select></div>
+      <div class="form-row"><label>Due</label><input type="date" id="qc-task-due"></div>
+    </div>
+  </div>
+  <div id="qc-habit-fields" style="display:none">
+    <div class="form-row"><label>Habit</label><select id="qc-habit-sel"></select></div>
+  </div>
+  <div id="qc-journal-fields" style="display:none">
+    <div class="form-row"><label>Entry</label><textarea id="qc-journal-text" rows="4" placeholder="A quick note…"></textarea></div>
+  </div>
+  <div id="qc-shop-fields" style="display:none">
+    <div class="form-row"><label>Item</label><input type="text" id="qc-shop-name" autocapitalize="sentences"></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveQuickCapture()">Save</button>
+    <button class="btn" onclick="closeModal('m-quick-capture')">Cancel</button>
   </div>
 </div></div>
 

@@ -56,6 +56,13 @@ import './ui/fullscreenTimer.js';
 import { renderJournal } from './features/journal/page.js';
 import { renderProfile, attachAutoSave, applyAIVis, initRoutineDays } from './features/profile/page.js';
 import { renderPasscodeSection } from './features/settings/page.js';
+import { renderInsights } from './features/insights/page.js';
+import { initPalette } from './ui/palette.js';
+import { initReminders } from './core/reminders.js';
+import { initBackup } from './core/backup.js';
+import { HABIT_TEMPLATES, applyHabitTemplate } from './core/templates.js';
+window._habitTemplates = HABIT_TEMPLATES;
+window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
 // ── renderPage ──────────────────────────────────────────────────────────────
 
@@ -73,6 +80,7 @@ export function renderPage(id) {
     case 'journal':     renderJournal(); break;
     case 'profile':     renderProfile(); renderCustomCats(); break;
     case 'settings':    renderPasscodeSection(); break;
+    case 'insights':    renderInsights(); break;
   }
 }
 
@@ -114,6 +122,9 @@ initTheme();
 initProjSwatches();
 initRoutineDays();
 attachAutoSave();
+initPalette();
+initReminders();
+initBackup();
 renderAll();
 renderProfile();
 applyAIVis();

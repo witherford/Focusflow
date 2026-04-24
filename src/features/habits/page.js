@@ -5,6 +5,7 @@ import { tierFor, streakBadge, DEFAULT_TIERS } from './tierStreak.js';
 import { isCounter, isCumulative, countFor, metOn, increment, complete, reset } from './counterMode.js';
 import { attachHabitGestures } from './gestures.js';
 import { promptHabitJournal } from './journalPrompt.js';
+import { computeStreakWithFreeze } from './streakFreeze.js';
 
 let hbOpen = { morning: true, afternoon: true, evening: true };
 const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙' };
@@ -138,10 +139,18 @@ export function renderHabitsToday() {
 
 export function renderHabitsAll() {
   const el = document.getElementById('h-all-list'); if (!el) return;
-  el.innerHTML = S.habits.length
-    ? S.habits.map(h => renderHabitCard(h, { flat: true })).join('')
-    : '<div style="color:var(--text3);text-align:center;padding:40px">No habits yet</div>';
+  if (S.habits.length) {
+    el.innerHTML = S.habits.map(h => renderHabitCard(h, { flat: true })).join('');
+  } else {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><div class="es-title">No habits yet</div><div class="es-sub">Pick a starter or craft your own</div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:420px;margin:0 auto">${renderHabitTemplateChips()}</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="openAddHabit()">+ Custom habit</button></div></div>`;
+  }
   wireGestures(el);
+}
+
+function renderHabitTemplateChips() {
+  // Lazy import-safe — templates module attaches to window
+  const tmpl = window._habitTemplates || [];
+  return tmpl.map((t, i) => `<button class="btn btn-sm" onclick="_applyHabitTemplateByIdx(${i})">${t.icon} ${t.name}</button>`).join('');
 }
 
 // Binary toggle (legacy) — kept for dashboard toggle + non-gesture callers.
@@ -156,6 +165,11 @@ export function toggleHabit(id) {
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
 }
 
+function populateHabitGoalSelect(selectedId) {
+  const sel = document.getElementById('habit-goal'); if (!sel) return;
+  sel.innerHTML = '<option value="">— none —</option>' + (S.goals || []).map(g => `<option value="${g.id}"${g.id === selectedId ? ' selected' : ''}>${g.name}</option>`).join('');
+}
+
 export function openAddHabit() {
   document.getElementById('m-habit-title').textContent = 'Add Habit';
   document.getElementById('habit-edit-id').value = '';
@@ -166,6 +180,7 @@ export function openAddHabit() {
   ['habit-target','habit-unit','habit-step'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = false;
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = true;
+  populateHabitGoalSelect('');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
@@ -183,6 +198,7 @@ export function openEditHabit(id) {
   const stepEl = document.getElementById('habit-step'); if (stepEl) stepEl.value = h.incrementStep ?? '';
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = !!h.cumulative;
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
+  populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
@@ -202,12 +218,14 @@ export function saveHabit() {
   const step = parseInt(document.getElementById('habit-step')?.value) || undefined;
   const cumulative = !!document.getElementById('habit-cumulative')?.checked;
   const journalPrompt = document.getElementById('habit-journal-prompt')?.checked !== false;
+  const goalId = document.getElementById('habit-goal')?.value || null;
   const data = {
     name,
     block: document.getElementById('habit-block').value,
     icon: document.getElementById('habit-icon').value || '●',
     mode,
     journalPrompt,
+    goalId,
   };
   if (mode === 'counter') {
     if (target) data.target = target;
@@ -223,22 +241,22 @@ export function saveHabit() {
 }
 
 export function deleteHabit(id) {
-  if (!confirm('Delete this habit? Streak will be lost.')) return;
-  S.habits = S.habits.filter(h => h.id !== id);
+  const idx = S.habits.findIndex(h => h.id === id); if (idx < 0) return;
+  const removed = S.habits[idx];
+  S.habits.splice(idx, 1);
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+  window.toastUndo?.(`Deleted "${removed.name}"`, () => {
+    S.habits.splice(idx, 0, removed);
+    save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+  });
 }
 
-// Streak = consecutive days from today backward where the habit was "met".
+// Streak = consecutive days from today backward where the habit was "met" (with auto-freeze).
 export function calcStreak(id) {
   const h = S.habits.find(x => x.id === id); if (!h) return 0;
-  let s = 0;
-  for (let i = 0; i < 365; i++) {
-    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
-    if (metOn(h, k)) s++; else break;
-  }
-  // Persist current tier on the habit for later analytics.
-  h.tier = tierFor(s, h.tierBase || DEFAULT_TIERS);
-  return s;
+  const { streak } = computeStreakWithFreeze(h);
+  h.tier = tierFor(streak, h.tierBase || DEFAULT_TIERS);
+  return streak;
 }
 
 export function renderHabitHeatmap() {

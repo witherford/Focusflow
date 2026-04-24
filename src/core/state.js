@@ -33,11 +33,13 @@ export function haptic(style = 'light') {
 }
 
 // Expose everything to window for inline onclick handlers
-window.S = S;
-window.today = today;
-window.year = year;
-window.uid = uid;
-window.f2 = f2;
-window.clamp = clamp;
-window.weekKey = weekKey;
-window.haptic = haptic;
+if (typeof window !== 'undefined') {
+  window.S = S;
+  window.today = today;
+  window.year = year;
+  window.uid = uid;
+  window.f2 = f2;
+  window.clamp = clamp;
+  window.weekKey = weekKey;
+  window.haptic = haptic;
+}
