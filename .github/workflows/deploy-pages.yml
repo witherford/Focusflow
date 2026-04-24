@@ -30,7 +30,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - name: Install deps
-        run: npm ci --no-audit --no-fund
+        # Use `install` not `ci` — npm ci chokes on Windows-generated locks
+        # that mark platform-optional esbuild binaries as required.
+        run: npm install --no-audit --no-fund --prefer-offline
       - name: Build
         run: npm run build
       - name: Show dist contents on failure
