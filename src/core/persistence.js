@@ -187,11 +187,26 @@ export function exportData() {
 }
 
 export function importData(e) {
-  const f = e.target.files[0]; if (!f) return;
+  const f = e.target.files?.[0];
+  if (!f) { toast('No file selected'); return; }
+  // Reset the input so the same file can be re-picked after an error
+  try { e.target.value = ''; } catch {}
+  if (f.size === 0) { toast('File is empty'); return; }
+  if (f.size > 20 * 1024 * 1024) { toast('File too large (>20MB)'); return; }
+  toast(`Reading ${f.name}…`);
   const r = new FileReader();
+  r.onerror = () => { console.error('FileReader error', r.error); toast('Could not read file — try saving it to Files first'); };
   r.onload = async ev => {
+    const text = ev.target.result;
+    let parsed;
     try {
-      const parsed = JSON.parse(ev.target.result);
+      parsed = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('JSON parse failed', parseErr, 'first 200 chars:', String(text).slice(0, 200));
+      toast('Not valid JSON — check the file');
+      return;
+    }
+    try {
       const v2 = migrate(parsed, detectVersion(parsed));
       await writeAll(v2);
       mergeCore(extractCore(v2));
@@ -200,8 +215,12 @@ export function importData(e) {
       S.meditation.sessions = v2.meditation.sessions || [];
       S.fitness.sessions = v2.fitness.sessions || [];
       S.journal = v2.journal || [];
-      window.renderAll?.(); toast('Imported ✓');
-    } catch (ex) { console.error(ex); toast('Import failed'); }
+      window.renderAll?.();
+      toast('Imported ✓');
+    } catch (ex) {
+      console.error('Migration/apply failed', ex);
+      toast('Import failed: ' + (ex?.message || 'unknown error'));
+    }
   };
   r.readAsText(f);
 }
