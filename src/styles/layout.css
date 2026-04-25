@@ -1,7 +1,10 @@
 /* Layout — from focusflow_v10.html lines 74-103 */
 .app { display: flex; height: 100vh; height: 100dvh; overflow: hidden; position: relative; padding-top: env(safe-area-inset-top); background: var(--bg); }
 
-.sidebar { width: 240px; background: var(--bg1); border-right: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.sidebar { width: 240px; background: var(--bg1); border-right: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); height: 100%; }
+.sidebar #sidenav { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; flex: 1 1 auto; min-height: 0; padding-bottom: 8px; }
+.sidebar #sidenav::-webkit-scrollbar { width: 6px; }
+.sidebar #sidenav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 .main { flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--safe-bottom) + 80px); overscroll-behavior-y: contain; }
 .page { display: none; padding: 0 0 20px 0; animation: pageIn 0.22s ease; }
 .page.active { display: block; }

@@ -7,6 +7,10 @@ import { metOn } from '../habits/counterMode.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
 import { renderAllDay } from './allDay.js';
 import { renderCheckin } from './checkin.js';
+import { isWidgetOn } from './widgetVisibility.js';
+
+function clear(id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; }
+function show(id, on) { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; }
 
 const fmtT = t => { if (!t) return '—'; const [h, m] = t.split(':'); const hr = +h; return (hr === 0 ? 12 : hr > 12 ? hr - 12 : hr) + ':' + m + (hr >= 12 ? 'pm' : 'am'); };
 const calcDur = (s, e) => { if (!s || !e) return ''; const [sh, sm] = s.split(':').map(Number); const [eh, em] = e.split(':').map(Number); const d = (eh * 60 + em) - (sh * 60 + sm); if (d <= 0) return ''; return d >= 60 ? Math.floor(d / 60) + 'h' + (d % 60 ? ' ' + d % 60 + 'm' : '') : d + 'm'; };
@@ -27,26 +31,29 @@ export function renderDash() {
   const dateLbl = document.getElementById('dash-date-label'); if (dateLbl) dateLbl.textContent = days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
   const greetEl = document.getElementById('dash-greeting'); if (greetEl) greetEl.textContent = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (S.profile.name ? ' ' + S.profile.name : '');
 
-  const log = S.habitLog[today()] || {};
-  const done = S.habits.filter(h => habitDoneToday(h)).length;
-  const pct = S.habits.length ? Math.round(done / S.habits.length * 100) : 0;
-  setText('s-habits', pct + '%');
-  setText('s-tasks', (S.tasks || []).filter(t => t.done && t.doneAt === today()).length);
-  const dwMin = (window.getTodayDwMin?.() || 0);
-  setText('s-focus', (dwMin / 60).toFixed(1) + 'h');
-  setText('s-streak', calcStreak_global());
+  show('stat-grid', isWidgetOn('stats'));
+  if (isWidgetOn('stats')) {
+    const log = S.habitLog[today()] || {};
+    const done = S.habits.filter(h => habitDoneToday(h)).length;
+    const pct = S.habits.length ? Math.round(done / S.habits.length * 100) : 0;
+    setText('s-habits', pct + '%');
+    setText('s-tasks', (S.tasks || []).filter(t => t.done && t.doneAt === today()).length);
+    const dwMin = (window.getTodayDwMin?.() || 0);
+    setText('s-focus', (dwMin / 60).toFixed(1) + 'h');
+    setText('s-streak', calcStreak_global());
+  }
 
-  renderSchedule();
-  renderCheckin();
-  renderAllDay();
-  renderUpNext();
-  renderQuickStart();
-  renderTasksDue();
-  renderHeatStrip();
-  renderGoalsDash();
-  renderPriorities();
-  renderBadHabits();
-  renderTimeblocks();
+  if (isWidgetOn('schedule'))   renderSchedule();   else clear('dash-schedule');
+  if (isWidgetOn('checkin'))    renderCheckin();    else clear('dash-checkin');
+  if (isWidgetOn('allday'))     renderAllDay();     else clear('dash-allday');
+  if (isWidgetOn('upnext'))     renderUpNext();     else clear('dash-up-next');
+  if (isWidgetOn('quickstart')) renderQuickStart(); else clear('dash-quickstart');
+  if (isWidgetOn('tasksdue'))   renderTasksDue();   else clear('dash-tasks-due');
+  if (isWidgetOn('heatstrip'))  renderHeatStrip();  else clear('dash-heatstrip');
+  if (isWidgetOn('goals'))      renderGoalsDash();  else clear('dash-goals');
+  if (isWidgetOn('priorities')) renderPriorities(); else clear('dash-priorities');
+  if (isWidgetOn('badhabits'))  renderBadHabits();  else { const el = document.getElementById('dash-bad-habits'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } }
+  if (isWidgetOn('timeblocks')) renderTimeblocks(); else clear('dash-timeblocks');
 }
 
 function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }

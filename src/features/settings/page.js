@@ -3,10 +3,12 @@ import { S } from '../../core/state.js';
 import { isJournalEncrypted, setPasscode, resetPasscode } from '../journal/encryption.js';
 import { getReminderSettings, toggleReminders, saveReminderSettings } from '../../core/reminders.js';
 import { renderBackupList } from '../../core/backup.js';
+import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
 
 export function renderPasscodeSection() {
   renderReminderSection();
   renderBackupList();
+  renderWidgetSettings();
   const set = document.getElementById('passcode-set');
   const manage = document.getElementById('passcode-manage');
   const status = document.getElementById('passcode-status');
