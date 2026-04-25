@@ -271,3 +271,14 @@
 /* Menu btn — search icon etc. */
 .menu-btn { background: transparent; border: none; color: var(--text2); font-size: 18px; padding: 6px 10px; cursor: pointer; }
 .menu-btn:hover { color: var(--text); }
+
+/* Guided meditation cards */
+.guided-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; color: var(--text); }
+.guided-card:hover { border-color: var(--teal); background: var(--teal-bg); }
+.guided-card:active { transform: scale(0.98); }
+.guided-card .gc-icon { font-size: 28px; flex-shrink: 0; }
+.guided-card .gc-info { flex: 1; min-width: 0; }
+.guided-card .gc-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.guided-card .gc-meta { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.guided-card .gc-desc { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.4; }
+.guided-card .gc-play { font-size: 18px; color: var(--teal); flex-shrink: 0; }

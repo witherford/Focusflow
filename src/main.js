@@ -71,6 +71,7 @@ import './core/importers.js';
 import './core/icsImport.js';
 import './core/csvExport.js';
 import './ui/voice.js';
+import { renderGuidedTab } from './features/meditation/guided.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -84,7 +85,7 @@ export function renderPage(id) {
     case 'projects':    renderProjTree(); renderAllFlat(); renderDueToday(); renderOverdue(); renderBreakdown(); break;
     case 'goals':       renderGoals(); break;
     case 'deepwork':    renderPresets(); renderDwLog(); break;
-    case 'meditation':  renderMedStats(); renderSavedTimers(); renderBreathPresets(); renderHeatmaps(); break;
+    case 'meditation':  renderMedStats(); renderSavedTimers(); renderBreathPresets(); renderHeatmaps(); renderGuidedTab(); break;
     case 'shopping':    renderShop(); break;
     case 'fitness':     renderFitness(); break;
     case 'journal':     renderJournal(); break;
@@ -106,7 +107,7 @@ export function renderAll() {
   safe(renderProjTree, 'proj.tree'); safe(renderAllFlat, 'proj.flat'); safe(renderDueToday, 'proj.due'); safe(renderOverdue, 'proj.over'); safe(renderBreakdown, 'proj.bd');
   safe(renderGoals, 'goals');
   safe(renderPresets, 'dw.presets'); safe(renderDwLog, 'dw.log');
-  safe(renderMedStats, 'med.stats'); safe(renderSavedTimers, 'med.saved'); safe(renderBreathPresets, 'med.breath'); safe(renderHeatmaps, 'med.heat');
+  safe(renderMedStats, 'med.stats'); safe(renderSavedTimers, 'med.saved'); safe(renderBreathPresets, 'med.breath'); safe(renderHeatmaps, 'med.heat'); safe(renderGuidedTab, 'med.guided');
   safe(renderShop, 'shop');
   safe(renderFitness, 'fitness');
   safe(renderWeight, 'weight');
