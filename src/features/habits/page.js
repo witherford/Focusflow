@@ -106,7 +106,7 @@ function handleDoubleTap(h) {
   const wasMet = doneToday(h);
   complete(h);
   haptic('medium');
-  if (!wasMet) promptHabitJournal(h);
+  if (!wasMet) { promptHabitJournal(h); window.awardXP?.('habit'); }
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
 }
 
@@ -161,7 +161,7 @@ export function toggleHabit(id) {
   const nowOn = !S.habitLog[today()][id];
   S.habitLog[today()][id] = nowOn;
   haptic(nowOn ? 'medium' : 'light');
-  if (nowOn) promptHabitJournal(h);
+  if (nowOn) { promptHabitJournal(h); window.awardXP?.('habit'); }
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
 }
 
@@ -180,6 +180,8 @@ export function openAddHabit() {
   ['habit-target','habit-unit','habit-step'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = false;
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = true;
+  const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
+  const upEl = document.getElementById('habit-unit-preset'); if (upEl) upEl.value = '';
   populateHabitGoalSelect('');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
@@ -198,6 +200,7 @@ export function openEditHabit(id) {
   const stepEl = document.getElementById('habit-step'); if (stepEl) stepEl.value = h.incrementStep ?? '';
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = !!h.cumulative;
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
+  const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = !!h.allDay;
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
@@ -206,7 +209,28 @@ export function openEditHabit(id) {
 export function toggleCounterFields() {
   const modeSel = document.getElementById('habit-mode'); if (!modeSel) return;
   const wrap = document.getElementById('habit-counter-fields'); if (!wrap) return;
-  wrap.style.display = modeSel.value === 'counter' ? '' : 'none';
+  const allDay = !!document.getElementById('habit-allday')?.checked;
+  wrap.style.display = (modeSel.value === 'counter' || allDay) ? '' : 'none';
+}
+
+export function toggleAllDayHabit() {
+  const allDay = !!document.getElementById('habit-allday')?.checked;
+  const modeSel = document.getElementById('habit-mode');
+  if (allDay && modeSel) modeSel.value = 'counter';
+  toggleCounterFields();
+}
+
+export function applyUnitPreset() {
+  const v = document.getElementById('habit-unit-preset')?.value;
+  if (!v) return;
+  const u = document.getElementById('habit-unit'); if (u) u.value = v;
+  // Sensible defaults for step + target when nothing set
+  const target = document.getElementById('habit-target');
+  const step = document.getElementById('habit-step');
+  const defs = { ml: { t: 2000, s: 250 }, l: { t: 2, s: 0.25 }, glasses: { t: 8, s: 1 }, cups: { t: 6, s: 1 }, minutes: { t: 30, s: 5 }, hours: { t: 1, s: 0.25 }, steps: { t: 10000, s: 500 }, miles: { t: 5, s: 0.5 }, km: { t: 8, s: 1 }, pages: { t: 20, s: 5 }, reps: { t: 100, s: 10 }, sets: { t: 10, s: 1 } };
+  const d = defs[v]; if (!d) return;
+  if (target && !target.value) target.value = d.t;
+  if (step && !step.value) step.value = d.s;
 }
 
 export function saveHabit() {
@@ -219,13 +243,15 @@ export function saveHabit() {
   const cumulative = !!document.getElementById('habit-cumulative')?.checked;
   const journalPrompt = document.getElementById('habit-journal-prompt')?.checked !== false;
   const goalId = document.getElementById('habit-goal')?.value || null;
+  const allDay = !!document.getElementById('habit-allday')?.checked;
   const data = {
     name,
     block: document.getElementById('habit-block').value,
     icon: document.getElementById('habit-icon').value || '●',
-    mode,
+    mode: allDay ? 'counter' : mode,
     journalPrompt,
     goalId,
+    allDay,
   };
   if (mode === 'counter') {
     if (target) data.target = target;
@@ -283,4 +309,6 @@ window.expandHabits = expandHabits;
 window.toggleHabitBlock = toggleHabitBlock;
 window.renderHabitHeatmap = renderHabitHeatmap;
 window.toggleCounterFields = toggleCounterFields;
+window.toggleAllDayHabit = toggleAllDayHabit;
+window.applyUnitPreset = applyUnitPreset;
 window.doneToday = doneToday;

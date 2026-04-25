@@ -22,5 +22,7 @@ export function toastUndo(msg, onUndo, dur = 5000) {
   _toastT = setTimeout(() => el.classList.remove('show'), dur);
 }
 
-window.toast = toast;
-window.toastUndo = toastUndo;
+if (typeof window !== 'undefined') {
+  window.toast = toast;
+  window.toastUndo = toastUndo;
+}

@@ -47,6 +47,9 @@ function extractCore(state) {
     shopping: state.shopping,
     customCats: state.customCats,
     settings: state.settings,
+    checkins: state.checkins || {},
+    gamification: state.gamification || null,
+    bodyMeasurements: state.bodyMeasurements || [],
   };
 }
 
@@ -63,6 +66,9 @@ function mergeCore(core) {
     shopping: core.shopping,
     customCats: core.customCats,
     settings: core.settings,
+    checkins: core.checkins || {},
+    gamification: core.gamification || null,
+    bodyMeasurements: core.bodyMeasurements || [],
   });
   // Merge into existing nested objects so we don't clobber sessions arrays
   S.deepwork = { ...S.deepwork, target: core.deepwork.target, presets: core.deepwork.presets };
@@ -226,20 +232,22 @@ export function importData(e) {
 }
 
 // ── Global autosave on inputs (feature forms) ────────────────────────────────
-document.addEventListener('input', e => {
-  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
-    showAutosaveDot('saving');
-    clearTimeout(_saveT);
-    _saveT = setTimeout(() => { window.saveProfile?.(true); }, 700);
-  }
-});
-document.addEventListener('change', e => {
-  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
-    showAutosaveDot('saving');
-    clearTimeout(_saveT);
-    _saveT = setTimeout(() => { window.saveProfile?.(true); }, 700);
-  }
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('input', e => {
+    if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+      showAutosaveDot('saving');
+      clearTimeout(_saveT);
+      _saveT = setTimeout(() => { window.saveProfile?.(true); }, 700);
+    }
+  });
+  document.addEventListener('change', e => {
+    if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+      showAutosaveDot('saving');
+      clearTimeout(_saveT);
+      _saveT = setTimeout(() => { window.saveProfile?.(true); }, 700);
+    }
+  });
+}
 
 // ── Categories ───────────────────────────────────────────────────────────────
 export const BASE_SHOP = ['Protein','Vegetables','Fruit','Grains & Carbs','Dairy & Eggs','Healthy Fats','Snacks','Drinks','Supplements','Other'];
@@ -272,17 +280,19 @@ export function populateSel(id, options, cur) {
 }
 
 // Expose to window
-window.save = save;
-window.load = load;
-window.exportData = exportData;
-window.importData = importData;
-window.resetFromBackup = resetFromBackup;
-window.showSave = showSave;
-window.showAutosaveDot = showAutosaveDot;
-window.shopCats = shopCats;
-window.projCats = projCats;
-window.goalCats = goalCats;
-window.addCustomCat = addCustomCat;
-window.delCustomCat = delCustomCat;
-window.renderCustomCats = renderCustomCats;
-window.populateSel = populateSel;
+if (typeof window !== 'undefined') {
+  window.save = save;
+  window.load = load;
+  window.exportData = exportData;
+  window.importData = importData;
+  window.resetFromBackup = resetFromBackup;
+  window.showSave = showSave;
+  window.showAutosaveDot = showAutosaveDot;
+  window.shopCats = shopCats;
+  window.projCats = projCats;
+  window.goalCats = goalCats;
+  window.addCustomCat = addCustomCat;
+  window.delCustomCat = delCustomCat;
+  window.renderCustomCats = renderCustomCats;
+  window.populateSel = populateSel;
+}

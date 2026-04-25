@@ -43,6 +43,7 @@ export function initRouter() {
       if (tid === 'pv-all') window.renderAllFlat();
       if (tid === 'pv-today') window.renderDueToday();
       if (tid === 'pv-overdue') window.renderOverdue();
+      if (tid === 'pv-calendar') window.renderCalendar?.();
       if (tid === 'pv-breakdown') window.renderBreakdown();
     });
   });

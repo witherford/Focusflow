@@ -61,6 +61,16 @@ import { initPalette } from './ui/palette.js';
 import { initReminders } from './core/reminders.js';
 import { initBackup } from './core/backup.js';
 import { HABIT_TEMPLATES, applyHabitTemplate } from './core/templates.js';
+import { renderWeight } from './features/weight/page.js';
+import { renderCalendar } from './features/projects/calendar.js';
+import { checkBadges } from './core/gamification.js';
+import { initShortcuts } from './ui/shortcuts.js';
+import './features/dashboard/allDay.js';
+import './features/dashboard/checkin.js';
+import './core/importers.js';
+import './core/icsImport.js';
+import './core/csvExport.js';
+import './ui/voice.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -81,6 +91,7 @@ export function renderPage(id) {
     case 'profile':     renderProfile(); renderCustomCats(); break;
     case 'settings':    renderPasscodeSection(); break;
     case 'insights':    renderInsights(); break;
+    case 'weight':      renderWeight(); break;
   }
 }
 
@@ -98,6 +109,7 @@ export function renderAll() {
   safe(renderMedStats, 'med.stats'); safe(renderSavedTimers, 'med.saved'); safe(renderBreathPresets, 'med.breath'); safe(renderHeatmaps, 'med.heat');
   safe(renderShop, 'shop');
   safe(renderFitness, 'fitness');
+  safe(renderWeight, 'weight');
   safe(renderJournal, 'journal');
   safe(renderProfile, 'profile'); safe(renderCustomCats, 'profile.cats');
   safe(renderPasscodeSection, 'settings.passcode');
@@ -115,7 +127,6 @@ window.renderBadHabits = renderBadHabits;
 // ── Init ────────────────────────────────────────────────────────────────────
 
 await load();
-setTheme(S.settings.theme !== 'light');
 initRouter();
 initModals();
 initTheme();
@@ -123,11 +134,13 @@ initProjSwatches();
 initRoutineDays();
 attachAutoSave();
 initPalette();
+initShortcuts();
 initReminders();
 initBackup();
 renderAll();
 renderProfile();
 applyAIVis();
+checkBadges();
 
 // Nav haptic patch
 document.querySelectorAll('.mob-nav-item,.nav-item').forEach(el => {

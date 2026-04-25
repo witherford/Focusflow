@@ -214,3 +214,60 @@
 
 /* Toast undo button */
 .toast .undo-btn { margin-left: 10px; background: var(--violet); color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+/* All-day habit widget */
+.allday-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; padding: 4px 0; }
+.allday-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: var(--r); background: var(--surface2); border: 1px solid var(--border); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; transition: all 0.15s; }
+.allday-tile:active { transform: scale(0.96); }
+.allday-tile.done { border-color: var(--green); background: rgba(92,200,122,0.08); }
+.allday-ring { display: block; }
+.allday-ring .ring-track { fill: none; stroke: var(--bg3); stroke-width: 6; }
+.allday-ring .ring-fill { fill: none; stroke: var(--teal); stroke-width: 6; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 0.3s ease; filter: drop-shadow(0 0 6px rgba(62,207,176,0.35)); }
+.allday-tile.done .allday-ring .ring-fill { stroke: var(--green); }
+.allday-ring .allday-icon { font-size: 22px; }
+.allday-name { font-size: 12px; font-weight: 500; text-align: center; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.allday-meta { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+/* Check-in card (mood/sleep) */
+.checkin-card { display: flex; gap: 12px; align-items: center; }
+.checkin-col { flex: 1; min-width: 0; }
+.mood-row { display: flex; gap: 4px; margin-top: 4px; }
+.mood-btn { flex: 1; padding: 6px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 20px; transition: all 0.15s; }
+.mood-btn:hover, .mood-btn.active { border-color: var(--violet); background: var(--violet-bg); transform: scale(1.05); }
+
+/* Calendar view */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day { aspect-ratio: 1; padding: 6px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); font-size: 11px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; gap: 2px; transition: all 0.15s; }
+.cal-day:hover { border-color: var(--border2); }
+.cal-day.today { border-color: var(--teal); background: var(--teal-bg); }
+.cal-day.other-month { opacity: 0.4; }
+.cal-day .cal-num { font-weight: 600; color: var(--text); }
+.cal-day .cal-dots { display: flex; flex-wrap: wrap; gap: 2px; }
+.cal-day .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+.cal-day .cal-dot.p-high { background: var(--rose); }
+.cal-day .cal-dot.p-medium { background: var(--gold); }
+.cal-day .cal-dot.p-low { background: var(--green); }
+.cal-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; font-size: 10px; color: var(--text3); text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Weight tracker */
+.weight-chart { width: 100%; height: 140px; }
+.weight-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.weight-row .w-date { font-family: 'DM Mono', monospace; color: var(--text3); min-width: 92px; }
+.weight-row .w-val { flex: 1; font-weight: 500; }
+
+/* XP / level */
+.level-card { display: flex; align-items: center; gap: 12px; }
+.level-badge { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,var(--violet),var(--teal)); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(124,110,247,0.35); }
+.xp-bar { flex: 1; }
+.xp-bar .xp-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.xp-bar .xp-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.xp-bar .xp-fill { height: 100%; background: linear-gradient(90deg,var(--violet),var(--teal)); transition: width 0.4s; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 10px; }
+.badge-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: var(--r); background: var(--surface2); border: 1px solid var(--border); font-size: 11px; text-align: center; }
+.badge-tile.unlocked { border-color: var(--gold); }
+.badge-tile.locked { opacity: 0.35; filter: grayscale(1); }
+.badge-tile .b-icon { font-size: 24px; }
+
+/* Menu btn — search icon etc. */
+.menu-btn { background: transparent; border: none; color: var(--text2); font-size: 18px; padding: 6px 10px; cursor: pointer; }
+.menu-btn:hover { color: var(--text); }

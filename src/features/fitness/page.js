@@ -143,11 +143,95 @@ export function saveFitLog() {
     }
   }
   S.fitness.sessions.push(s);
-  save(); window.closeModal('m-fit-log'); renderFitness();
+  save(); window.awardXP?.('fitSession'); window.closeModal('m-fit-log'); renderFitness();
+}
+
+// --- Body measurements ---
+export function logMeasurement(kind, value) {
+  value = parseFloat(value); if (!value) return;
+  if (!Array.isArray(S.bodyMeasurements)) S.bodyMeasurements = [];
+  S.bodyMeasurements.push({ id: uid(), date: today(), kind, value, ts: Date.now() });
+  save(); renderBodyMeasurements();
+}
+
+export function deleteMeasurement(id) {
+  const idx = (S.bodyMeasurements || []).findIndex(m => m.id === id);
+  if (idx < 0) return;
+  const removed = S.bodyMeasurements.splice(idx, 1)[0];
+  save(); renderBodyMeasurements();
+  window.toastUndo?.(`Removed ${removed.kind} ${removed.value}cm`, () => {
+    S.bodyMeasurements.splice(idx, 0, removed); save(); renderBodyMeasurements();
+  });
+}
+
+export function renderBodyMeasurements() {
+  const el = document.getElementById('body-measurements'); if (!el) return;
+  const all = S.bodyMeasurements || [];
+  const kinds = ['chest', 'waist', 'hips', 'arm', 'thigh'];
+  const latest = {}; const prior = {};
+  for (const kind of kinds) {
+    const items = all.filter(m => m.kind === kind).sort((a, b) => a.ts - b.ts);
+    if (items.length) {
+      latest[kind] = items[items.length - 1];
+      if (items.length > 1) prior[kind] = items[items.length - 2];
+    }
+  }
+  el.innerHTML = `<div class="card-header"><div class="card-title">📏 Body measurements (cm)</div></div>
+    <div class="form-grid" style="margin-bottom:10px">
+      ${kinds.map(k => `<div class="form-row"><label>${k[0].toUpperCase() + k.slice(1)}${latest[k] ? ` · now ${latest[k].value}${prior[k] ? ' <span style="color:var(--text3);font-size:10px">(was ' + prior[k].value + ')</span>' : ''}` : ''}</label><input type="number" step="0.1" inputmode="decimal" id="bm-${k}" placeholder="${latest[k] ? latest[k].value : ''}"></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="saveAllMeasurements()">+ Log today</button>
+      <span style="align-self:center;font-size:11px;color:var(--text3)">${all.length} total entries</span>
+    </div>
+    ${all.length ? `<div style="margin-top:10px">${renderMeasurementLog()}</div>` : ''}
+  `;
+}
+
+function renderMeasurementLog() {
+  const all = (S.bodyMeasurements || []).slice().sort((a, b) => b.ts - a.ts).slice(0, 10);
+  return all.map(m => `<div class="weight-row"><span class="w-date">${m.date}</span><span class="w-val">${m.kind}: ${m.value} cm</span><button class="btn-icon btn-xs danger" onclick="deleteMeasurement('${m.id}')">✕</button></div>`).join('');
+}
+
+export function saveAllMeasurements() {
+  const kinds = ['chest', 'waist', 'hips', 'arm', 'thigh'];
+  let n = 0;
+  for (const k of kinds) {
+    const el = document.getElementById('bm-' + k);
+    if (el && el.value) { logMeasurement(k, el.value); el.value = ''; n++; }
+  }
+  if (n) window.toast?.(`Logged ${n} measurement${n === 1 ? '' : 's'} ✓`);
+  else window.toast?.('Enter at least one value');
+}
+
+// --- Per-exercise progression chart ---
+export function renderWeightProgression() {
+  const el = document.getElementById('fit-progression'); if (!el) return;
+  const lifting = S.fitness.modalities.filter(m => m.type === 'weightlifting');
+  if (!lifting.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card-header"><div class="card-title">📈 Weightlifting progression</div></div>
+    ${lifting.map(m => {
+      const sessions = S.fitness.sessions.filter(s => s.modId === m.id && s.weight > 0).sort((a, b) => a.ts - b.ts);
+      if (!sessions.length) return `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${m.name}: no sessions</div>`;
+      const w = 300, h = 60;
+      const max = Math.max(...sessions.map(s => s.weight));
+      const min = Math.min(...sessions.map(s => s.weight));
+      const range = Math.max(1, max - min);
+      const pts = sessions.map((s, i) => {
+        const x = (i / Math.max(1, sessions.length - 1)) * w;
+        const y = h - ((s.weight - min) / range) * h;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:500">${m.icon || '🏋️'} ${m.name}</span><span style="color:var(--text3)">${min}→${max} · ${sessions.length} sessions</span></div>
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px"><polyline points="${pts}" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linejoin="round"/></svg>
+      </div>`;
+    }).join('')}
+  `;
 }
 
 // Expose
-window.renderFitness = renderFitness;
+window.renderFitness = () => { renderFitness(); renderBodyMeasurements(); renderWeightProgression(); };
 window.renderFitLog = renderFitLog;
 window.openAddModality = openAddModality;
 window.openEditModality = openEditModality;
@@ -155,3 +239,8 @@ window.saveModality = saveModality;
 window.delModality = delModality;
 window.openLogFit = openLogFit;
 window.saveFitLog = saveFitLog;
+window.logMeasurement = logMeasurement;
+window.deleteMeasurement = deleteMeasurement;
+window.saveAllMeasurements = saveAllMeasurements;
+window.renderBodyMeasurements = renderBodyMeasurements;
+window.renderWeightProgression = renderWeightProgression;

@@ -5,6 +5,8 @@ import { progressRing } from '../../ui/progressRing.js';
 import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { metOn } from '../habits/counterMode.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
+import { renderAllDay } from './allDay.js';
+import { renderCheckin } from './checkin.js';
 
 const fmtT = t => { if (!t) return '—'; const [h, m] = t.split(':'); const hr = +h; return (hr === 0 ? 12 : hr > 12 ? hr - 12 : hr) + ':' + m + (hr >= 12 ? 'pm' : 'am'); };
 const calcDur = (s, e) => { if (!s || !e) return ''; const [sh, sm] = s.split(':').map(Number); const [eh, em] = e.split(':').map(Number); const d = (eh * 60 + em) - (sh * 60 + sm); if (d <= 0) return ''; return d >= 60 ? Math.floor(d / 60) + 'h' + (d % 60 ? ' ' + d % 60 + 'm' : '') : d + 'm'; };
@@ -35,6 +37,8 @@ export function renderDash() {
   setText('s-streak', calcStreak_global());
 
   renderSchedule();
+  renderCheckin();
+  renderAllDay();
   renderUpNext();
   renderQuickStart();
   renderTasksDue();
@@ -180,7 +184,7 @@ export function renderTimeblocks() {
 
 export function toggleHabitDash(id) { if (!S.habitLog[today()]) S.habitLog[today()] = {}; S.habitLog[today()][id] = !S.habitLog[today()][id]; haptic('medium'); save(); renderDash(); }
 export function toggleChoreDash(id) { if (!S.choreLog[weekKey()]) S.choreLog[weekKey()] = {}; S.choreLog[weekKey()][id] = !S.choreLog[weekKey()][id]; haptic('light'); save(); renderDash(); }
-export function toggleTaskQuick(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; t.done = !t.done; t.doneAt = t.done ? today() : null; haptic('medium'); save(); renderDash(); }
+export function toggleTaskQuick(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; const wasDone = t.done; t.done = !t.done; t.doneAt = t.done ? today() : null; haptic('medium'); save(); if (!wasDone && t.done) window.awardXP?.(t.priority === 'high' ? 'taskHighPri' : 'task'); renderDash(); }
 
 // Bad Habit modal
 export function openBH(name) {

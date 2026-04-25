@@ -2,6 +2,7 @@
 import { S } from '../../core/state.js';
 import { habitCompletionByWeek, dwMinutesByDay, fitnessWeightVolumeByWeek, weekSummary } from './trends.js';
 import { goalProgress } from '../goals/progress.js';
+import { renderLevelCard, renderBadges } from '../../core/gamification.js';
 
 function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
 
@@ -29,6 +30,8 @@ function sparkLine(data, valueFn) {
 }
 
 export function renderInsights() {
+  renderLevelCard();
+  renderBadges();
   const sum = weekSummary();
   setText('ins-hab-week', sum.habits.pct + '%');
   setText('ins-focus-week', (sum.dwMin / 60).toFixed(1) + 'h');

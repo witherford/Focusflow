@@ -48,6 +48,7 @@
     <div class="nav-item" data-page="deepwork"><span class="nav-emoji">🧠</span> Deep Work</div>
     <div class="nav-item" data-page="meditation"><span class="nav-emoji">🧘</span> Meditation</div>
     <div class="nav-item" data-page="fitness"><span class="nav-emoji">💪</span> Fitness</div>
+    <div class="nav-item" data-page="weight"><span class="nav-emoji">⚖️</span> Weight</div>
     <div class="nav-section">Life</div>
     <div class="nav-item" data-page="shopping"><span class="nav-emoji">🛒</span> Shopping</div>
     <div class="nav-item" data-page="journal"><span class="nav-emoji">📓</span> Journal</div>
@@ -87,6 +88,8 @@
       <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="s-streak">0</div><div class="stat-label">Streak</div></div>
     </div>
     <div id="dash-schedule" style="margin-bottom:14px"></div>
+    <div id="dash-checkin" style="margin-bottom:14px"></div>
+    <div id="dash-allday" style="margin-bottom:14px"></div>
     <div id="dash-up-next" style="margin-bottom:14px"></div>
     <div id="dash-quickstart" style="margin-bottom:14px"></div>
     <div id="dash-tasks-due" style="margin-bottom:14px"></div>
@@ -169,6 +172,7 @@
       <div class="tab" data-tab="pv-all">All Tasks</div>
       <div class="tab" data-tab="pv-today">Due Today</div>
       <div class="tab" data-tab="pv-overdue">Overdue</div>
+      <div class="tab" data-tab="pv-calendar">Calendar</div>
       <div class="tab" data-tab="pv-breakdown">Overview</div>
     </div>
   </div>
@@ -183,6 +187,7 @@
     </div>
     <div id="pv-today" class="tab-content" style="display:none"><div id="today-tasks"></div></div>
     <div id="pv-overdue" class="tab-content" style="display:none"><div id="overdue-tasks"></div></div>
+    <div id="pv-calendar" class="tab-content" style="display:none"><div id="calendar-view"></div></div>
     <div id="pv-breakdown" class="tab-content" style="display:none"><div id="breakdown"></div></div>
   </div>
 </div>
@@ -215,6 +220,7 @@
     </div>
   </div>
   <div style="padding:0 20px">
+    <div id="level-card"></div>
     <div class="stat-grid" style="margin-bottom:14px">
       <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-hab-week">0%</div><div class="stat-label">Habits · 7d</div></div>
       <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-focus-week">0h</div><div class="stat-label">Focus · 7d</div></div>
@@ -226,6 +232,7 @@
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Goals progress</div></div><div id="ins-goals"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Fitness volume · weightlifting</div></div><div id="ins-fit-chart"></div></div>
     <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
+    <div id="badges-grid" style="margin-bottom:14px"></div>
   </div>
 </div>
 
@@ -512,6 +519,12 @@
       <div class="card-header"><div class="card-title">Modalities</div></div>
       <div id="fit-list"></div>
     </div>
+    <div class="card" id="body-measurements-card" style="margin-bottom:14px">
+      <div id="body-measurements"></div>
+    </div>
+    <div class="card" id="fit-progression-card" style="margin-bottom:14px">
+      <div id="fit-progression"></div>
+    </div>
     <div class="card">
       <div class="card-header"><div class="card-title">Recent sessions</div></div>
       <div id="fit-log"></div>
@@ -560,6 +573,19 @@
     <button class="btn" onclick="closeModal('m-fit-log')">Cancel</button>
   </div>
 </div></div>
+
+<!-- ═══════════════════════════════════════ WEIGHT ══════ -->
+<div class="page" id="page-weight">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Body weight</div><div class="page-title">Weight</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px"><div id="weight-content"></div></div>
+</div>
 
 <!-- ═══════════════════════════════════════ SHOPPING ════ -->
 <div class="page" id="page-shopping">
@@ -707,9 +733,15 @@
         <button class="btn btn-primary" onclick="downloadBackup()">📤 Download backup</button>
         <button class="btn" onclick="document.getElementById('import-file').click()">📥 Import JSON</button>
         <button class="btn" onclick="snapshotNow()">💾 Snapshot now</button>
+        <button class="btn" onclick="exportCSVAll()">🧾 Export CSV bundle</button>
+        <button class="btn" onclick="document.getElementById('task-import-file').click()">📋 Import tasks (CSV / JSON)</button>
+        <button class="btn" onclick="document.getElementById('ics-file').click()">📅 Import .ics</button>
         <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');localStorage.removeItem('ff:v2:core');location.reload()}">🗑 Reset All</button>
         <input type="file" id="import-file" accept="application/json,text/plain,.json,.txt,*/*" style="display:none" onchange="importData(event)">
+        <input type="file" id="task-import-file" accept=".csv,.json,text/csv,application/json,*/*" style="display:none" onchange="handleTaskImport(event)">
+        <input type="file" id="ics-file" accept=".ics,text/calendar,*/*" style="display:none" onchange="handleIcsImport(event)">
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Task import detects TickTick, Todoist, MS To-Do, Any.do, and generic CSV/JSON. Projects/lists are created if they don't exist.</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Recent daily snapshots (kept in-device, last 7)</div>
       <div id="backup-list"></div>
     </div>
@@ -749,6 +781,22 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="lockJournalAction()">🔒 Lock now</button>
           <button class="btn btn-danger" onclick="applyResetPasscode()">Reset passcode (wipes journal)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">🎨 Appearance</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-sm" onclick="cycleTheme()">Toggle dark · light · auto</button>
+        <span style="font-size:12px;color:var(--text3)">Accent:</span>
+        <div id="accent-swatches" style="display:flex;gap:6px">
+          <span class="swatch" data-accent="violet" style="background:#7c6ef7;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('violet')"></span>
+          <span class="swatch" data-accent="teal" style="background:#3ecfb0;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('teal')"></span>
+          <span class="swatch" data-accent="rose" style="background:#f06b6b;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('rose')"></span>
+          <span class="swatch" data-accent="gold" style="background:#e8b84b;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('gold')"></span>
+          <span class="swatch" data-accent="green" style="background:#5cc87a;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('green')"></span>
+          <span class="swatch" data-accent="orange" style="background:#f0904a;width:24px;height:24px;border-radius:50%;cursor:pointer" onclick="setAccent('orange')"></span>
         </div>
       </div>
     </div>
@@ -923,14 +971,16 @@ Review with team | low | | first pass only"></textarea></div>
   <div class="modal-title" id="m-habit-title">Add Habit</div>
   <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
   <div class="form-grid">
-    <div class="form-row"><label>Time block</label><select id="habit-block"><option value="morning">☀️ Morning</option><option value="afternoon">🌤 Afternoon</option><option value="evening">🌙 Evening</option></select></div>
+    <div class="form-row"><label>Time block</label><select id="habit-block"><option value="morning">☀️ Morning</option><option value="afternoon">🌤 Afternoon</option><option value="evening">🌙 Evening</option><option value="allday">⏳ All day</option></select></div>
     <div class="form-row"><label>Icon (emoji)</label><input type="text" id="habit-icon" maxlength="2"></div>
     <div class="form-row"><label>Mode</label><select id="habit-mode" onchange="toggleCounterFields()"><option value="binary">Binary (done/not done)</option><option value="counter">Counter (N per day)</option></select></div>
   </div>
+  <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-allday" onchange="toggleAllDayHabit()"> ⏳ All-day habit (gradual throughout day — tap adds, hold resets, double-tap completes)</label></div>
   <div id="habit-counter-fields" style="display:none">
     <div class="form-grid">
       <div class="form-row"><label>Daily target</label><input type="number" id="habit-target" min="1" placeholder="e.g. 8"></div>
-      <div class="form-row"><label>Unit</label><input type="text" id="habit-unit" placeholder="glasses, pages…"></div>
+      <div class="form-row"><label>Unit</label><select id="habit-unit-preset" onchange="applyUnitPreset()"><option value="">Custom…</option><option value="ml">ml</option><option value="l">L (litres)</option><option value="glasses">glasses</option><option value="cups">cups</option><option value="minutes">minutes</option><option value="hours">hours</option><option value="steps">steps</option><option value="miles">miles</option><option value="km">km</option><option value="pages">pages</option><option value="reps">reps</option><option value="sets">sets</option></select></div>
+      <div class="form-row"><label>Unit label</label><input type="text" id="habit-unit" placeholder="ml, steps, pages…"></div>
       <div class="form-row"><label>Step per tap</label><input type="number" id="habit-step" min="1" placeholder="1"></div>
       <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-cumulative"> Cumulative (life-total)</label></div>
     </div>
@@ -1081,7 +1131,7 @@ Review with team | low | | first pass only"></textarea></div>
     </select>
   </div>
   <div id="qc-task-fields">
-    <div class="form-row"><label>Task</label><input type="text" id="qc-task-name" autocapitalize="sentences" enterkeyhint="done" placeholder="What needs doing?"></div>
+    <div class="form-row"><label>Task <button type="button" class="btn btn-xs" style="float:right;font-size:11px" onclick="startVoice('qc-task-name')">🎙 Voice</button></label><input type="text" id="qc-task-name" autocapitalize="sentences" enterkeyhint="done" placeholder="What needs doing?"></div>
     <div class="form-grid">
       <div class="form-row"><label>Priority</label><select id="qc-task-priority"><option value="high">🔴 High</option><option value="medium" selected>🟡 Med</option><option value="low">🟢 Low</option></select></div>
       <div class="form-row"><label>Due</label><input type="date" id="qc-task-due"></div>
