@@ -63,12 +63,16 @@ function wireGestures(container) {
     const h = S.habits.find(x => x.id === id); if (!h) return;
     attachHabitGestures(row, {
       onTap: ({ event }) => {
-        if (event.target.closest('[data-habit-action]')) return; // edit/del buttons handle themselves
+        if (event.target.closest('[data-habit-action]')) return;
         handleTap(h);
       },
       onDoubleTap: ({ event }) => {
         if (event.target.closest('[data-habit-action]')) return;
         handleDoubleTap(h);
+      },
+      onTripleTap: ({ event }) => {
+        if (event.target.closest('[data-habit-action]')) return;
+        handleTripleTap(h);
       },
       onLongPress: ({ event }) => {
         if (event.target.closest('[data-habit-action]')) return;
@@ -95,7 +99,7 @@ function handleTap(h) {
     const n = increment(h);
     haptic('light');
     const target = h.target || 1;
-    if (n >= target && prev < target && !isCumulative(h)) { haptic('medium'); promptHabitJournal(h); }
+    if (n >= target && prev < target && !isCumulative(h)) haptic('medium');
   } else {
     toggleHabit(h.id);
     return;
@@ -107,8 +111,18 @@ function handleDoubleTap(h) {
   const wasMet = doneToday(h);
   complete(h);
   haptic('medium');
-  if (!wasMet) { promptHabitJournal(h); window.awardXP?.('habit'); }
+  if (!wasMet) window.awardXP?.('habit');
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+}
+
+// Triple-tap = complete AND open the journal/reflection prompt.
+function handleTripleTap(h) {
+  const wasMet = doneToday(h);
+  complete(h);
+  haptic('heavy');
+  if (!wasMet) window.awardXP?.('habit');
+  save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+  promptHabitJournal(h, { force: true });
 }
 
 function handleLongPress(h) {
@@ -172,7 +186,7 @@ export function toggleHabit(id) {
   const nowOn = !S.habitLog[today()][id];
   S.habitLog[today()][id] = nowOn;
   haptic(nowOn ? 'medium' : 'light');
-  if (nowOn) { promptHabitJournal(h); window.awardXP?.('habit'); }
+  if (nowOn) window.awardXP?.('habit');
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
 }
 

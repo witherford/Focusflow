@@ -766,20 +766,31 @@
   </div>
   <div class="section">
     <div class="card" style="margin-bottom:14px">
-      <div class="card-header"><div class="card-title">Data</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <button class="btn btn-primary" onclick="downloadBackup()">📤 Download backup</button>
-        <button class="btn" onclick="document.getElementById('import-file').click()">📥 Import JSON</button>
-        <button class="btn" onclick="snapshotNow()">💾 Snapshot now</button>
-        <button class="btn" onclick="exportCSVAll()">🧾 Export CSV bundle</button>
-        <button class="btn" onclick="document.getElementById('task-import-file').click()">📋 Import tasks (CSV / JSON)</button>
-        <button class="btn" onclick="document.getElementById('ics-file').click()">📅 Import .ics</button>
-        <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');localStorage.removeItem('ff:v2:core');location.reload()}">🗑 Reset All</button>
-        <input type="file" id="import-file" accept="application/json,text/plain,.json,.txt,*/*" style="display:none" onchange="importData(event)">
+      <div class="card-header"><div class="card-title">📥 Import data from another app</div></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">
+        Bring your tasks across from another tool. Detects TickTick, Todoist, MS To-Do, Any.do, Things, and generic CSV/JSON. Projects/lists are created automatically if they don't already exist.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="document.getElementById('task-import-file').click()">📋 Import tasks (CSV / JSON)</button>
+        <button class="btn" onclick="document.getElementById('ics-file').click()">📅 Import .ics calendar</button>
         <input type="file" id="task-import-file" accept=".csv,.json,text/csv,application/json,*/*" style="display:none" onchange="handleTaskImport(event)">
         <input type="file" id="ics-file" accept=".ics,text/calendar,*/*" style="display:none" onchange="handleIcsImport(event)">
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Task import detects TickTick, Todoist, MS To-Do, Any.do, and generic CSV/JSON. Projects/lists are created if they don't exist.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">💾 FocusFlow backup &amp; data</div></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">
+        Backup, restore, and export your own FocusFlow data. Daily snapshots are kept on-device automatically.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-primary" onclick="downloadBackup()">⬇ Download backup (JSON)</button>
+        <button class="btn" onclick="document.getElementById('import-file').click()">⬆ Import FocusFlow backup</button>
+        <button class="btn" onclick="snapshotNow()">💾 Snapshot now</button>
+        <button class="btn" onclick="exportCSVAll()">🧾 Export CSV bundle</button>
+        <button class="btn btn-danger" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem('ff7');localStorage.removeItem('ff:v2:core');location.reload()}">🗑 Reset all</button>
+        <input type="file" id="import-file" accept="application/json,text/plain,.json,.txt,*/*" style="display:none" onchange="importData(event)">
+      </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Recent daily snapshots (kept in-device, last 7)</div>
       <div id="backup-list"></div>
     </div>

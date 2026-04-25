@@ -6,7 +6,7 @@ import { save } from '../core/persistence.js';
 const STEPS = [
   { sel: '#dash-greeting', title: 'Welcome to FocusFlow', body: 'Your home shows today at a glance — habits, tasks, mood, and quick-start timers. Swipe between pages or use the menu.' },
   { sel: '#quickCaptureFab', title: 'Quick capture', body: 'Tap the + button anywhere to add a task, tick a habit, jot a journal note, or add a shopping item — without leaving where you are.' },
-  { sel: '[data-page="habits"]', title: 'Build habits', body: 'Tap to mark binary habits done. For all-day habits like water, tap-tap-tap to add increments — long-press resets, double-tap completes.' },
+  { sel: '[data-page="habits"]', title: 'Build habits', body: '<strong>Single tap</strong> = toggle / increment.<br><strong>Double-tap</strong> = mark complete.<br><strong>Triple-tap</strong> = complete <em>and</em> open a quick reflection note.<br><strong>Long-press</strong> = reset (counter habits only).' },
   { sel: '[data-page="insights"]', title: 'See your trends', body: 'Insights shows weekly habit %, focus hours, badges, and a guided 5-question Sunday review.' },
   { sel: '#themeBtn', title: 'Cycle theme', body: 'Dark / light / auto — and pick an accent color in Settings.' },
   { sel: null, title: '⌨ Shortcuts', body: 'Press <kbd>?</kbd> for keyboard shortcuts, or <kbd>⌘K</kbd> to search anything.' },

@@ -8,19 +8,21 @@ import { save } from '../../core/persistence.js';
 let _autoDismiss = null;
 let _currentHabitId = null;
 
-export function promptHabitJournal(habit) {
+export function promptHabitJournal(habit, opts = {}) {
   if (!habit) return;
-  // Per-habit opt-out — the habit explicitly disabled prompts.
-  if (habit.journalPrompt === false) return;
-  // Global setting to disable (defaults to on).
-  if (S.settings && S.settings.habitJournalPrompt === false) return;
+  // `force` (used by triple-tap) bypasses opt-outs.
+  if (!opts.force) {
+    if (habit.journalPrompt === false) return;
+    if (S.settings && S.settings.habitJournalPrompt === false) return;
+  }
   _currentHabitId = habit.id;
   const m = document.getElementById('m-habit-journal'); if (!m) return;
   document.getElementById('hj-habit-name').textContent = habit.name;
   document.getElementById('hj-text').value = '';
   m.style.display = 'flex';
+  // No auto-dismiss when forced — user explicitly asked for it.
   if (_autoDismiss) clearTimeout(_autoDismiss);
-  _autoDismiss = setTimeout(dismissHabitJournal, 6000);
+  if (!opts.force) _autoDismiss = setTimeout(dismissHabitJournal, 6000);
 }
 
 export function saveHabitJournal() {
