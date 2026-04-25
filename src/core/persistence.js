@@ -50,6 +50,7 @@ function extractCore(state) {
     checkins: state.checkins || {},
     gamification: state.gamification || null,
     bodyMeasurements: state.bodyMeasurements || [],
+    sleepLog: state.sleepLog || [],
   };
 }
 
@@ -69,6 +70,7 @@ function mergeCore(core) {
     checkins: core.checkins || {},
     gamification: core.gamification || null,
     bodyMeasurements: core.bodyMeasurements || [],
+    sleepLog: core.sleepLog || [],
   });
   // Merge into existing nested objects so we don't clobber sessions arrays
   S.deepwork = { ...S.deepwork, target: core.deepwork.target, presets: core.deepwork.presets };

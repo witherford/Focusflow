@@ -72,6 +72,10 @@ import './core/icsImport.js';
 import './core/csvExport.js';
 import './ui/voice.js';
 import { renderGuidedTab } from './features/meditation/guided.js';
+import { renderSleep } from './features/sleep/page.js';
+import { startOnboarding } from './ui/onboarding.js';
+import './core/cloudSync.js';
+import './features/settings/cloudSyncUI.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -93,6 +97,7 @@ export function renderPage(id) {
     case 'settings':    renderPasscodeSection(); break;
     case 'insights':    renderInsights(); break;
     case 'weight':      renderWeight(); break;
+    case 'sleep':       renderSleep(); break;
   }
 }
 
@@ -111,6 +116,7 @@ export function renderAll() {
   safe(renderShop, 'shop');
   safe(renderFitness, 'fitness');
   safe(renderWeight, 'weight');
+  safe(renderSleep, 'sleep');
   safe(renderJournal, 'journal');
   safe(renderProfile, 'profile'); safe(renderCustomCats, 'profile.cats');
   safe(renderPasscodeSection, 'settings.passcode');
@@ -142,6 +148,7 @@ renderAll();
 renderProfile();
 applyAIVis();
 checkBadges();
+startOnboarding();
 
 // Nav haptic patch
 document.querySelectorAll('.mob-nav-item,.nav-item').forEach(el => {

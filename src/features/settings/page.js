@@ -4,11 +4,13 @@ import { isJournalEncrypted, setPasscode, resetPasscode } from '../journal/encry
 import { getReminderSettings, toggleReminders, saveReminderSettings } from '../../core/reminders.js';
 import { renderBackupList } from '../../core/backup.js';
 import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
+import { renderCloudSyncSection } from './cloudSyncUI.js';
 
 export function renderPasscodeSection() {
   renderReminderSection();
   renderBackupList();
   renderWidgetSettings();
+  renderCloudSyncSection();
   const set = document.getElementById('passcode-set');
   const manage = document.getElementById('passcode-manage');
   const status = document.getElementById('passcode-status');

@@ -15,6 +15,9 @@ export function openAddJournal() {
   window.populateSel('j-habit-sel', neg.length ? neg : ['No habits'], neg[0] || '');
   setJType('avoided'); document.getElementById('j-dt').value = new Date().toISOString().slice(0, 16);
   document.getElementById('j-text').value = ''; document.getElementById('j-edit-id').value = '';
+  const ph = document.getElementById('j-photo'); if (ph) ph.value = '';
+  const pd = document.getElementById('j-photo-data'); if (pd) pd.value = '';
+  const pr = document.getElementById('j-photo-preview'); if (pr) pr.innerHTML = '';
   document.getElementById('m-journal').style.display = 'flex';
 }
 export function openEditJE(id) {
@@ -31,9 +34,33 @@ export function setJType(t) {
 }
 export function saveJournal() {
   const habitId = document.getElementById('j-habit-sel').value, type = document.getElementById('j-type').value, datetime = document.getElementById('j-dt').value, text = document.getElementById('j-text').value.trim(); if (!habitId || !datetime) return;
-  const editId = document.getElementById('j-edit-id').value, entry = { id: editId || uid(), habitId, type, datetime, text };
-  if (editId) { const idx = S.journal.findIndex(j => j.id === editId); if (idx > -1) S.journal[idx] = entry; } else S.journal.push(entry);
+  const editId = document.getElementById('j-edit-id').value;
+  const photo = document.getElementById('j-photo-data')?.value || '';
+  const entry = { id: editId || uid(), habitId, type, datetime, text };
+  if (photo) entry.photo = photo;
+  if (editId) { const idx = S.journal.findIndex(j => j.id === editId); if (idx > -1) entry.photo = entry.photo || S.journal[idx].photo; if (idx > -1) S.journal[idx] = entry; } else S.journal.push(entry);
   persistAfterMutation(); window.closeModal('m-journal'); renderJournal();
+}
+
+export function onJournalPhoto(ev) {
+  const file = ev?.target?.files?.[0]; if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { window.toast?.('Photo too large (>4MB) — pick a smaller one'); ev.target.value = ''; return; }
+  const r = new FileReader();
+  r.onload = e => {
+    // Compress via canvas to ~1024px wide JPEG to keep IDB happy.
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas');
+      const maxW = 1024; const scale = Math.min(1, maxW / img.width);
+      cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const data = cv.toDataURL('image/jpeg', 0.78);
+      const pd = document.getElementById('j-photo-data'); if (pd) pd.value = data;
+      const pr = document.getElementById('j-photo-preview'); if (pr) pr.innerHTML = `<img src="${data}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid var(--border)">`;
+    };
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
 }
 export function renderJournal() {
   const el = document.getElementById('journal-list'); if (!el) return;
@@ -67,7 +94,8 @@ export function renderJournal() {
   </div>` + entries.map(e => {
     const dt = e.datetime ? new Date(e.datetime) : null;
     const dtStr = dt ? dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div class="journal-entry ${e.type || ''}"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${e.text ? '8' : '0'}px"><div style="flex:1"><div style="font-weight:600;font-size:13px">${e.type === 'avoided' ? '✅' : '❌'} ${e.habitId}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${dtStr}</div></div><button class="btn-icon" onclick="openEditJE('${e.id}')">✏️</button><button class="btn-icon danger" onclick="delJournal('${e.id}')">🗑</button></div>${e.text ? `<div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text2)">${e.text}</div>` : ''}</div>`;
+    const typeIcon = e.type === 'review' ? '📝' : e.type === 'avoided' ? '✅' : e.type === 'note' ? '🗒' : '❌';
+    return `<div class="journal-entry ${e.type || ''}"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${e.text || e.photo ? '8' : '0'}px"><div style="flex:1"><div style="font-weight:600;font-size:13px">${typeIcon} ${e.habitId || (e.type === 'review' ? 'Weekly review' : 'Note')}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${dtStr}</div></div><button class="btn-icon" onclick="openEditJE('${e.id}')">✏️</button><button class="btn-icon danger" onclick="delJournal('${e.id}')">🗑</button></div>${e.text ? `<div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text2)">${e.text}</div>` : ''}${e.photo ? `<img src="${e.photo}" style="max-width:100%;max-height:240px;border-radius:8px;margin-top:8px">` : ''}</div>`;
   }).join('');
 }
 export function delJournal(id) { S.journal = S.journal.filter(j => j.id !== id); persistAfterMutation(); renderJournal(); }
@@ -97,3 +125,4 @@ window.saveJournal = saveJournal;
 window.delJournal = delJournal;
 window.tryUnlockJournal = tryUnlockJournal;
 window.lockJournalAction = lockJournalAction;
+window.onJournalPhoto = onJournalPhoto;

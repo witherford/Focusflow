@@ -49,6 +49,7 @@
     <div class="nav-item" data-page="meditation"><span class="nav-emoji">🧘</span> Meditation</div>
     <div class="nav-item" data-page="fitness"><span class="nav-emoji">💪</span> Fitness</div>
     <div class="nav-item" data-page="weight"><span class="nav-emoji">⚖️</span> Weight</div>
+    <div class="nav-item" data-page="sleep"><span class="nav-emoji">😴</span> Sleep</div>
     <div class="nav-section">Life</div>
     <div class="nav-item" data-page="shopping"><span class="nav-emoji">🛒</span> Shopping</div>
     <div class="nav-item" data-page="journal"><span class="nav-emoji">📓</span> Journal</div>
@@ -214,7 +215,8 @@
     <div class="page-header-inner">
       <div class="page-title-wrap"><div class="page-subtitle">Trends & review</div><div class="page-title">Insights</div></div>
       <div class="header-actions">
-        <button class="btn btn-sm btn-primary" onclick="runWeeklyReview()">✨ Weekly review</button>
+        <button class="btn btn-sm" onclick="startWReview()">📝 Guided review</button>
+        <button class="btn btn-sm btn-primary" onclick="runWeeklyReview()">✨ AI review</button>
         <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
       </div>
     </div>
@@ -229,6 +231,7 @@
     </div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Habit completion · 8 weeks</div></div><div id="ins-hab-chart"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Deep work · 30 days</div></div><div id="ins-dw-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Time-of-day · focus minutes</div></div><div id="ins-tod-chart"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Goals progress</div></div><div id="ins-goals"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Fitness volume · weightlifting</div></div><div id="ins-fit-chart"></div></div>
     <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
@@ -611,6 +614,17 @@
   <div style="padding:0 20px"><div id="weight-content"></div></div>
 </div>
 
+<!-- ═══════════════════════════════════════ SLEEP ═══════ -->
+<div class="page" id="page-sleep">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Rest & recovery</div><div class="page-title">Sleep</div></div>
+      <div class="header-actions"><button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button></div>
+    </div>
+  </div>
+  <div style="padding:0 20px"><div id="sleep-content"></div></div>
+</div>
+
 <!-- ═══════════════════════════════════════ SHOPPING ════ -->
 <div class="page" id="page-shopping">
   <div class="page-header">
@@ -809,6 +823,10 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:14px" id="cloud-sync-card">
+      <div id="cloud-sync-section"></div>
+    </div>
+
     <div class="card" style="margin-bottom:14px">
       <div class="card-header"><div class="card-title">🏠 Dashboard widgets</div><div style="font-size:11px;color:var(--text3)">show / hide cards on the home screen</div></div>
       <div id="widget-toggles" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -955,6 +973,7 @@
   </div>
   <div class="form-row"><label>Project</label><select id="task-project"></select></div>
   <div class="form-row"><label>Link to goal (optional)</label><select id="task-goal"><option value="">— none —</option></select></div>
+  <div class="form-row"><label>Repeat</label><select id="task-repeat"><option value="">— none —</option><option value="daily">📅 Daily</option><option value="weekly">📆 Weekly</option><option value="monthly">🗓 Monthly</option><option value="yearly">🎉 Yearly</option></select></div>
   <input type="hidden" id="task-edit-id"><input type="hidden" id="task-parent-id">
   <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
     <button class="btn btn-primary" style="flex:1;min-width:120px" onclick="saveTask()">Save Task</button>
@@ -1015,6 +1034,7 @@ Review with team | low | | first pass only"></textarea></div>
     </div>
   </div>
   <div class="form-row"><label>Link to goal (optional)</label><select id="habit-goal"><option value="">— none —</option></select></div>
+  <div class="form-row"><label>Why this matters (optional)</label><textarea id="habit-why" rows="2" placeholder="The reason behind the habit — read this when motivation dips"></textarea></div>
   <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-journal-prompt" checked> Show reflection prompt when completed</label></div>
   <input type="hidden" id="habit-edit-id">
   <div style="display:flex;gap:8px;margin-top:16px">
@@ -1139,7 +1159,9 @@ Review with team | low | | first pass only"></textarea></div>
   </div>
   <div class="form-row"><label>Date & time</label><input type="datetime-local" id="j-dt"></div>
   <div class="form-row"><label>Entry</label><textarea id="j-text" rows="5" placeholder="Describe triggers, feelings, context…"></textarea></div>
-  <input type="hidden" id="j-type" value="avoided"><input type="hidden" id="j-edit-id">
+  <div class="form-row"><label>Photo (optional)</label><input type="file" id="j-photo" accept="image/*" capture="environment" onchange="onJournalPhoto(event)"></div>
+  <div id="j-photo-preview" style="margin-bottom:8px"></div>
+  <input type="hidden" id="j-type" value="avoided"><input type="hidden" id="j-edit-id"><input type="hidden" id="j-photo-data">
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn btn-primary" style="flex:1" onclick="saveJournal()">Save</button>
     <button class="btn" onclick="closeModal('m-journal')">Cancel</button>

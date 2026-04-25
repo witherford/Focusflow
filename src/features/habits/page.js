@@ -6,6 +6,7 @@ import { isCounter, isCumulative, countFor, metOn, increment, complete, reset } 
 import { attachHabitGestures } from './gestures.js';
 import { promptHabitJournal } from './journalPrompt.js';
 import { computeStreakWithFreeze } from './streakFreeze.js';
+import { attachReorder, reorderArr } from '../../ui/dragReorder.js';
 
 let hbOpen = { morning: true, afternoon: true, evening: true };
 const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙' };
@@ -145,6 +146,16 @@ export function renderHabitsAll() {
     el.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><div class="es-title">No habits yet</div><div class="es-sub">Pick a starter or craft your own</div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:420px;margin:0 auto">${renderHabitTemplateChips()}</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="openAddHabit()">+ Custom habit</button></div></div>`;
   }
   wireGestures(el);
+  if (!el._reorderWired && S.habits.length) {
+    el._reorderWired = true;
+    attachReorder(el, {
+      itemSelector: '.habit-row',
+      onReorder: (from, to) => {
+        reorderArr(S.habits, from, to);
+        save(); renderHabitsAll(); renderHabitsToday(); window.renderDash?.();
+      }
+    });
+  }
 }
 
 function renderHabitTemplateChips() {
@@ -182,6 +193,7 @@ export function openAddHabit() {
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = true;
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
   const upEl = document.getElementById('habit-unit-preset'); if (upEl) upEl.value = '';
+  const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = '';
   populateHabitGoalSelect('');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
@@ -201,6 +213,7 @@ export function openEditHabit(id) {
   const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = !!h.cumulative;
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = !!h.allDay;
+  const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = h.whyMatters || '';
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   document.getElementById('m-habit').style.display = 'flex';
@@ -244,6 +257,7 @@ export function saveHabit() {
   const journalPrompt = document.getElementById('habit-journal-prompt')?.checked !== false;
   const goalId = document.getElementById('habit-goal')?.value || null;
   const allDay = !!document.getElementById('habit-allday')?.checked;
+  const whyMatters = (document.getElementById('habit-why')?.value || '').trim();
   const data = {
     name,
     block: document.getElementById('habit-block').value,
@@ -252,6 +266,7 @@ export function saveHabit() {
     journalPrompt,
     goalId,
     allDay,
+    whyMatters,
   };
   if (mode === 'counter') {
     if (target) data.target = target;

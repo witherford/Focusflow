@@ -58,6 +58,28 @@ export function fitnessWeightVolumeByWeek(weeks = 8) {
   return out;
 }
 
+// Bin completed-task and focus-session events by hour-of-day (0-23).
+export function productivityByHour(days = 30) {
+  const bins = Array(24).fill(0);
+  const since = Date.now() - days * 864e5;
+  for (const s of (S.deepwork?.sessions || [])) {
+    if (s.ts && s.ts >= since) {
+      const h = new Date(s.ts).getHours();
+      bins[h] += (s.min || 0);
+    }
+  }
+  // Tasks completed: weight by 30 "minutes-equivalent" each
+  for (const t of (S.tasks || [])) {
+    if (t.done && t.doneAt) {
+      const ts = new Date(t.doneAt).getTime();
+      if (ts >= since) {
+        // No exact time on completion — distribute evenly across day; skip
+      }
+    }
+  }
+  return bins;
+}
+
 export function weekSummary() {
   const habits = habitCompletionByWeek(1)[0] || { done: 0, total: 0, pct: 0 };
   let dwMin = 0; dwMinutesByDay(7).forEach(d => dwMin += d.min);

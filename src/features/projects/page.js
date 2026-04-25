@@ -2,6 +2,7 @@
 import { S, today, uid, year } from '../../core/state.js';
 import { save, projCats } from '../../core/persistence.js';
 import './bulkAdd.js';
+import { spawnNextOccurrence, snooze as snoozeTask } from './recurring.js';
 
 const getChildren = pid => S.tasks.filter(t => t.parentId === pid);
 const getRoots = pjId => S.tasks.filter(t => t.projectId === pjId && !t.parentId);
@@ -14,10 +15,22 @@ const priIcon = { high: '🔴', medium: '🟡', low: '🟢' };
 export function collapseProjects() { S.projects.forEach(p => p.open = false); S.tasks.forEach(t => t.expanded = false); save(); renderProjTree(); }
 export function expandProjects() { S.projects.forEach(p => p.open = true); S.tasks.forEach(t => t.expanded = true); save(); renderProjTree(); }
 
+let _showArchived = false;
+export function toggleShowArchived() { _showArchived = !_showArchived; renderProjTree(); }
+
 export function renderProjTree() {
   const el = document.getElementById('proj-tree'); if (!el) return;
   if (!S.projects.length) { el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)"><div style="font-size:48px;margin-bottom:12px">📁</div><div style="font-size:15px;margin-bottom:16px">No projects yet</div><button class="btn btn-primary" onclick="openAddProject()">+ Create First Project</button></div>`; return; }
-  el.innerHTML = S.projects.map(renderProjCard).join('');
+  const visible = S.projects.filter(p => _showArchived || !p.archived);
+  const archCount = S.projects.filter(p => p.archived).length;
+  el.innerHTML = visible.map(renderProjCard).join('') +
+    (archCount ? `<div style="text-align:center;padding:14px"><button class="btn btn-sm" onclick="toggleShowArchived()">${_showArchived ? 'Hide archived' : `Show archived (${archCount})`}</button></div>` : '');
+}
+
+export function archiveProject(id) {
+  const p = S.projects.find(x => x.id === id); if (!p) return;
+  p.archived = !p.archived; save(); renderProjTree();
+  window.toast?.(p.archived ? `Archived "${p.name}"` : `Unarchived "${p.name}"`);
 }
 
 function renderProjCard(p) {
@@ -36,6 +49,7 @@ function renderProjCard(p) {
         <button class="btn-icon" onclick="event.stopPropagation();openEditProject('${p.id}')">✏️</button>
         <button class="btn-icon" onclick="event.stopPropagation();openAddTaskTo('${p.id}')">+task</button>
         <button class="btn-icon" title="Bulk add" onclick="event.stopPropagation();openBulkAdd('${p.id}')">⇪</button>
+        <button class="btn-icon" title="${p.archived ? 'Unarchive' : 'Archive'}" onclick="event.stopPropagation();archiveProject('${p.id}')">${p.archived ? '📂' : '📥'}</button>
         <button class="btn-icon danger" onclick="event.stopPropagation();deleteProject('${p.id}')">🗑</button>
       </div>
       <span style="color:var(--text3);font-size:12px;transition:.3s;transform:rotate(${open ? 90 : 0}deg);display:inline-block">▶</span>
@@ -75,7 +89,23 @@ function renderTaskNode(task, depth) {
 }
 
 export function toggleProj(id) { const p = S.projects.find(x => x.id === id); if (!p) return; p.open = !(p.open !== false); save(); renderProjTree(); }
-export function toggleTask(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; t.done = !t.done; t.doneAt = t.done ? today() : null; if (t.done) allDesc(id).forEach(d => { d.done = true; d.doneAt = today(); }); save(); renderProjTree(); window.renderDash?.(); window.renderGoals?.(); }
+export function toggleTask(id) {
+  const t = S.tasks.find(x => x.id === id); if (!t) return;
+  const wasDone = t.done;
+  t.done = !t.done; t.doneAt = t.done ? today() : null;
+  if (t.done) allDesc(id).forEach(d => { d.done = true; d.doneAt = today(); });
+  if (!wasDone && t.done && t.repeat) {
+    const next = spawnNextOccurrence(t);
+    if (next) window.toast?.(`✓ Done — next due ${next.due}`);
+  } else if (!wasDone && t.done) window.awardXP?.(t.priority === 'high' ? 'taskHighPri' : 'task');
+  save(); renderProjTree(); window.renderDash?.(); window.renderGoals?.();
+}
+
+export function snoozeTaskAction(id, kind) {
+  const t = S.tasks.find(x => x.id === id); if (!t) return;
+  snoozeTask(t, kind); save(); renderProjTree(); window.renderDash?.();
+  window.toast?.(`Snoozed to ${t.due}`);
+}
 export function expandTask(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; t.expanded = !t.expanded; save(); renderProjTree(); }
 export function deleteTask(id) {
   const t = S.tasks.find(x => x.id === id); if (!t) return;
@@ -112,16 +142,17 @@ export function setProjColor(c) { _projColor = c; document.getElementById('proj-
 export function saveProject() { const name = document.getElementById('proj-name').value.trim(); if (!name) return; const editId = document.getElementById('proj-edit-id').value, data = { name, desc: document.getElementById('proj-desc').value, due: document.getElementById('proj-due').value, category: document.getElementById('proj-cat').value, color: _projColor, open: true }; if (editId) { const p = S.projects.find(x => x.id === editId); if (p) Object.assign(p, data); } else S.projects.push({ id: uid(), createdAt: Date.now(), ...data }); save(); window.closeModal('m-project'); renderProjTree(); }
 function populateTaskProjs(selId, projId) { const s = document.getElementById(selId); if (!s) return; s.innerHTML = S.projects.map(p => `<option value="${p.id}"${p.id === projId ? ' selected' : ''}>${p.name}</option>`).join(''); }
 function populateTaskGoals(goalId) { const s = document.getElementById('task-goal'); if (!s) return; s.innerHTML = '<option value="">— none —</option>' + (S.goals || []).map(g => `<option value="${g.id}"${g.id === goalId ? ' selected' : ''}>${g.name}</option>`).join(''); }
-export function openAddTaskTo(projId) { document.getElementById('m-task-title').textContent = 'Add Task'; document.getElementById('task-edit-id').value = ''; document.getElementById('task-parent-id').value = ''; ['task-name', 'task-notes'].forEach(id => document.getElementById(id).value = ''); document.getElementById('task-priority').value = 'medium'; document.getElementById('task-due').value = year() + '-12-31'; populateTaskProjs('task-project', projId); populateTaskGoals(''); document.getElementById('m-task').style.display = 'flex'; }
+export function openAddTaskTo(projId) { document.getElementById('m-task-title').textContent = 'Add Task'; document.getElementById('task-edit-id').value = ''; document.getElementById('task-parent-id').value = ''; ['task-name', 'task-notes'].forEach(id => document.getElementById(id).value = ''); document.getElementById('task-priority').value = 'medium'; document.getElementById('task-due').value = year() + '-12-31'; populateTaskProjs('task-project', projId); populateTaskGoals(''); document.getElementById('task-repeat') && (document.getElementById('task-repeat').value = ''); document.getElementById('m-task').style.display = 'flex'; }
 export function openAddSubtask(pid) { const par = S.tasks.find(x => x.id === pid); if (!par) return; document.getElementById('m-task-title').textContent = 'Add Step'; document.getElementById('task-edit-id').value = ''; document.getElementById('task-parent-id').value = pid; ['task-name', 'task-notes'].forEach(id => document.getElementById(id).value = ''); document.getElementById('task-priority').value = 'medium'; document.getElementById('task-due').value = year() + '-12-31'; populateTaskProjs('task-project', par.projectId); populateTaskGoals(par.goalId || ''); document.getElementById('m-task').style.display = 'flex'; }
-export function openEditTask(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; document.getElementById('m-task-title').textContent = 'Edit Task'; document.getElementById('task-edit-id').value = id; document.getElementById('task-parent-id').value = t.parentId || ''; document.getElementById('task-name').value = t.name; document.getElementById('task-notes').value = t.notes || ''; document.getElementById('task-priority').value = t.priority || 'medium'; document.getElementById('task-due').value = t.due || ''; populateTaskProjs('task-project', t.projectId); populateTaskGoals(t.goalId || ''); document.getElementById('m-task').style.display = 'flex'; }
+export function openEditTask(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; document.getElementById('m-task-title').textContent = 'Edit Task'; document.getElementById('task-edit-id').value = id; document.getElementById('task-parent-id').value = t.parentId || ''; document.getElementById('task-name').value = t.name; document.getElementById('task-notes').value = t.notes || ''; document.getElementById('task-priority').value = t.priority || 'medium'; document.getElementById('task-due').value = t.due || ''; populateTaskProjs('task-project', t.projectId); populateTaskGoals(t.goalId || ''); const rEl = document.getElementById('task-repeat'); if (rEl) rEl.value = t.repeat || ''; document.getElementById('m-task').style.display = 'flex'; }
 export function saveTask(addAnother) {
   const name = document.getElementById('task-name').value.trim(); if (!name) return;
   const editId = document.getElementById('task-edit-id').value;
   const pid = document.getElementById('task-parent-id').value;
   const projId = document.getElementById('task-project').value;
   const goalId = document.getElementById('task-goal')?.value || null;
-  const data = { name, notes: document.getElementById('task-notes').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, projectId: projId, parentId: pid || null, goalId };
+  const repeatVal = document.getElementById('task-repeat')?.value || '';
+  const data = { name, notes: document.getElementById('task-notes').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, projectId: projId, parentId: pid || null, goalId, repeat: repeatVal || null };
   if (editId) { const t = S.tasks.find(x => x.id === editId); if (t) Object.assign(t, data); }
   else S.tasks.push({ id: uid(), done: false, doneAt: null, expanded: false, createdAt: Date.now(), accruedMinutes: 0, ...data });
   if (pid) { const pt = S.tasks.find(x => x.id === pid); if (pt) pt.expanded = true; }
@@ -157,6 +188,9 @@ window.setProjColor = setProjColor;
 window.saveProject = saveProject;
 window.openAddTaskTo = openAddTaskTo;
 window.openAddSubtask = openAddSubtask;
+window.snoozeTaskAction = snoozeTaskAction;
+window.archiveProject = archiveProject;
+window.toggleShowArchived = toggleShowArchived;
 window.openEditTask = openEditTask;
 window.saveTask = saveTask;
 window.collapseProjects = collapseProjects;

@@ -18,10 +18,35 @@ function buildIndex() {
   return out;
 }
 
+// Fuzzy: subsequence match scoring. Higher = better.
+// Scores reward consecutive runs and matches at word starts.
+function fuzzyScore(needle, hay) {
+  needle = needle.toLowerCase(); hay = hay.toLowerCase();
+  if (!needle) return 1;
+  let ni = 0, hi = 0, score = 0, run = 0, prevWordStart = false;
+  while (ni < needle.length && hi < hay.length) {
+    if (needle[ni] === hay[hi]) {
+      const isWordStart = hi === 0 || /[\s\-_/.]/.test(hay[hi - 1]);
+      score += 2 + run + (isWordStart ? 4 : 0);
+      run++;
+      ni++;
+    } else { run = 0; }
+    hi++;
+  }
+  if (ni < needle.length) return 0; // didn't match all chars
+  // Bonus for shorter haystack
+  score += Math.max(0, 12 - hay.length / 4);
+  return score;
+}
+
 function match(q, idx) {
-  q = q.trim().toLowerCase();
+  q = q.trim();
   if (!q) return idx.slice(0, 30);
-  return idx.filter(i => (i.label + ' ' + (i.sub || '')).toLowerCase().includes(q)).slice(0, 40);
+  const scored = idx.map(i => ({ ...i, _s: fuzzyScore(q, (i.label + ' ' + (i.sub || ''))) }))
+    .filter(i => i._s > 0)
+    .sort((a, b) => b._s - a._s)
+    .slice(0, 40);
+  return scored;
 }
 
 function render() {

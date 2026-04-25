@@ -1,6 +1,7 @@
 // Insights — weekly/monthly review + charts
 import { S } from '../../core/state.js';
-import { habitCompletionByWeek, dwMinutesByDay, fitnessWeightVolumeByWeek, weekSummary } from './trends.js';
+import { habitCompletionByWeek, dwMinutesByDay, fitnessWeightVolumeByWeek, weekSummary, productivityByHour } from './trends.js';
+import './reviewWizard.js';
 import { goalProgress } from '../goals/progress.js';
 import { renderLevelCard, renderBadges } from '../../core/gamification.js';
 
@@ -64,6 +65,17 @@ export function renderInsights() {
       : '<div class="empty-state"><div class="es-icon">🎯</div><div class="es-sub">No goals yet</div></div>';
   }
 
+  const todEl = document.getElementById('ins-tod-chart');
+  if (todEl) {
+    const bins = productivityByHour(30);
+    const max = Math.max(1, ...bins);
+    const peak = bins.indexOf(max);
+    const html = `<div class="chart-bars" style="height:90px">${bins.map((v, h) => {
+      const pct = (v / max * 100).toFixed(0);
+      return `<div class="chart-bar-col"><div class="chart-bar" style="height:${pct}%" title="${h}:00 - ${v}min"></div><div style="font-size:9px">${h % 6 === 0 ? h : ''}</div></div>`;
+    }).join('')}</div>${max > 0 ? `<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px">Most productive: <strong style="color:var(--teal)">${peak}:00 - ${peak + 1}:00</strong></div>` : '<div class="caption" style="text-align:center">Log focus sessions to see your peak hours</div>'}`;
+    todEl.innerHTML = html;
+  }
   const fEl = document.getElementById('ins-fit-chart');
   if (fEl) {
     const data = fitnessWeightVolumeByWeek(8);
