@@ -7,10 +7,7 @@ export function stopAmbient() {
   if (_gn) { _gn.disconnect(); } _gn = null;
 }
 
-export function playAmbient(type) {
-  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
-  stopAmbient(); if (!type) return;
-  if (_ac.state === 'suspended') _ac.resume();
+function buildAmbient(type) {
   const sr = _ac.sampleRate, buf = _ac.createBuffer(1, sr * 2, sr), data = buf.getChannelData(0);
   let last = 0;
   for (let i = 0; i < data.length; i++) {
@@ -30,13 +27,32 @@ export function playAmbient(type) {
   _nn.connect(filt); filt.connect(_gn); _gn.connect(_ac.destination); _nn.start();
 }
 
+export function playAmbient(type) {
+  try {
+    if (!_ac) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      _ac = new Ctx();
+    }
+    stopAmbient();
+    if (!type) return;
+    const proceed = () => buildAmbient(type);
+    if (_ac.state === 'suspended') _ac.resume().then(proceed).catch(() => {});
+    else proceed();
+  } catch (e) { /* silent */ }
+}
+
 // ─── Chimes / Speech ─────────────────────────────────────────────────────────
 // Short start/end tones for timers. Three flavours so the brain learns the
 // meaning: 'start' = ascending pair, 'end' = descending triad, 'tick' = single.
 let _chimeCtx = null;
+
 function chimeCtx() {
-  if (!_chimeCtx) _chimeCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (_chimeCtx.state === 'suspended') _chimeCtx.resume();
+  if (!_chimeCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    _chimeCtx = new Ctx();
+  }
   return _chimeCtx;
 }
 
@@ -50,20 +66,33 @@ function tone(ctx, freq, startAt, dur = 0.35, gain = 0.18, type = 'sine') {
   o.start(startAt); o.stop(startAt + dur + 0.05);
 }
 
+function scheduleChime(ctx, kind) {
+  const t = ctx.currentTime + 0.02;  // tiny lead so events aren't in the past
+  if (kind === 'start') {
+    tone(ctx, 660, t,        0.18, 0.15);
+    tone(ctx, 880, t + 0.16, 0.30, 0.18);
+  } else if (kind === 'tick') {
+    tone(ctx, 1000, t, 0.08, 0.10, 'triangle');
+  } else { // 'end'
+    tone(ctx, 880, t,        0.20, 0.18);
+    tone(ctx, 660, t + 0.20, 0.20, 0.18);
+    tone(ctx, 440, t + 0.40, 0.45, 0.20);
+  }
+}
+
 export function playChime(kind = 'end') {
   try {
-    const ctx = chimeCtx(), t = ctx.currentTime;
-    if (kind === 'start') {
-      tone(ctx, 660, t,        0.18, 0.15);
-      tone(ctx, 880, t + 0.16, 0.30, 0.18);
-    } else if (kind === 'tick') {
-      tone(ctx, 1000, t, 0.08, 0.10, 'triangle');
-    } else { // 'end'
-      tone(ctx, 880, t,        0.20, 0.18);
-      tone(ctx, 660, t + 0.20, 0.20, 0.18);
-      tone(ctx, 440, t + 0.40, 0.45, 0.20);
+    const ctx = chimeCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      // resume() is async — wait for it before scheduling, otherwise events
+      // get queued at currentTime=0 and fire all at once when the context
+      // wakes up (often heard as a single click or nothing at all).
+      ctx.resume().then(() => scheduleChime(ctx, kind)).catch(() => {});
+    } else {
+      scheduleChime(ctx, kind);
     }
-  } catch (e) { /* user-gesture not yet given — silent */ }
+  } catch (e) { /* silent */ }
 }
 
 // Speech synthesis. Picks the most "human" voice available on the device.
@@ -133,7 +162,33 @@ export function speak(text, opts = {}) {
 export function listVoices() { return loadVoices().map(v => ({ name: v.name, lang: v.lang, localService: v.localService })); }
 if (typeof window !== 'undefined') window.listVoices = listVoices;
 
+// ─── Audio unlock on first user gesture ──────────────────────────────────────
+// Desktop browsers (Chrome, Firefox, Safari, Edge) keep AudioContexts in a
+// "suspended" state until a user interacts with the page. We attach a one-shot
+// listener that warms up the chime + ambient contexts on the first pointer or
+// keyboard event. By the time the user hits ▶ on a meditation timer, the
+// contexts are already running and the chime can schedule cleanly.
+function unlockAudio() {
+  try {
+    const ctx = chimeCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (_ac && _ac.state === 'suspended') _ac.resume().catch(() => {});
+    // Some Safari builds also need the speech synthesizer to be touched once
+    // before voices populate — a no-op cancel does the trick.
+    try { window.speechSynthesis?.cancel(); } catch {}
+  } catch {}
+}
+
+if (typeof document !== 'undefined') {
+  const opts = { once: true, passive: true, capture: true };
+  document.addEventListener('pointerdown', unlockAudio, opts);
+  document.addEventListener('touchend', unlockAudio, opts);
+  document.addEventListener('keydown', unlockAudio, opts);
+  document.addEventListener('click', unlockAudio, opts);
+}
+
 window.stopAmbient = stopAmbient;
 window.playAmbient = playAmbient;
 window.playChime = playChime;
 window.speak = speak;
+window.unlockAudio = unlockAudio;
