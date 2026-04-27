@@ -1,17 +1,13 @@
-// Guided meditations — script-driven, narrated via Web Speech (TTS).
-// Each script is a list of cues at second offsets; timer drives the cues.
-// Falls back gracefully if speechSynthesis is unavailable.
-import { S, today, haptic } from '../../core/state.js';
-import { save } from '../../core/persistence.js';
-import { speak, playChime, playAmbient, stopAmbient } from '../../core/audio.js';
+// Guided meditations — script selector that drives the main meditation timer.
+// Selecting a script binds it to the current timer; cues fire at proportional
+// offsets across whatever duration you've chosen, so a 10-min Body Scan still
+// works as a 5-min compressed session or a 20-min slower one.
+import { speak } from '../../core/audio.js';
 
-// ── Library of scripts ──────────────────────────────────────────────────────
-// Cues are [seconds, text]. Total duration set by `mins`. Cues should fit
-// comfortably inside the duration; the timer will keep ticking after the last cue.
 export const GUIDED_LIBRARY = [
   {
     id: 'gm-bodyscan-10', name: 'Body Scan', icon: '🌿', mins: 10,
-    desc: 'A full-body relaxation, head to toes', sound: '',
+    desc: 'A full-body relaxation, head to toes',
     cues: [
       [2, 'Welcome. Find a comfortable position, sitting or lying down. Let your hands rest, and allow your eyes to gently close.'],
       [22, 'Begin by taking a slow, deep breath in through your nose. And a long, gentle exhale through your mouth. Two more like that.'],
@@ -30,7 +26,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-breath-5', name: 'Breath Awareness', icon: '🌬️', mins: 5,
-    desc: 'A short anchor for the breath', sound: '',
+    desc: 'A short anchor for the breath',
     cues: [
       [2, 'Settle in. Close your eyes if it feels right. Let your shoulders drop.'],
       [18, 'Bring your attention to the breath. Don’t change it — just notice it.'],
@@ -43,7 +39,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-loving-10', name: 'Loving-Kindness', icon: '💗', mins: 10,
-    desc: 'Send goodwill to yourself and others', sound: '',
+    desc: 'Send goodwill to yourself and others',
     cues: [
       [2, 'Sit comfortably. Take three slow breaths to settle.'],
       [40, 'Bring to mind the image of yourself, just as you are. Silently say: "May I be safe. May I be well. May I be at ease."'],
@@ -59,7 +55,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-gratitude-5', name: 'Gratitude', icon: '🙏', mins: 5,
-    desc: 'Three things you’re grateful for', sound: '',
+    desc: 'Three things you’re grateful for',
     cues: [
       [2, 'Find your seat. Take a long breath in. Out.'],
       [25, 'Bring to mind one thing from today that you’re grateful for. Something small is fine.'],
@@ -72,7 +68,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-evening-10', name: 'Evening Wind-Down', icon: '🌙', mins: 10,
-    desc: 'Release the day, prepare for sleep', sound: '',
+    desc: 'Release the day, prepare for sleep',
     cues: [
       [2, 'Lie down or sit comfortably. Let your body be heavy.'],
       [20, 'Take a slow inhale… and a longer exhale. Lengthen the out-breath.'],
@@ -88,7 +84,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-focus-5', name: 'Focus Reset', icon: '⚡', mins: 5,
-    desc: 'Quick mental clearing before deep work', sound: '',
+    desc: 'Quick mental clearing before deep work',
     cues: [
       [2, 'Sit upright. Feet on the floor. Hands resting.'],
       [15, 'Take three sharp breaths in through the nose. Long exhales out the mouth.'],
@@ -101,134 +97,87 @@ export const GUIDED_LIBRARY = [
   },
 ];
 
-// ── Player ──────────────────────────────────────────────────────────────────
-let _state = { running: false, scriptId: null, secs: 0, total: 0, int: null, firedIdx: 0 };
+// Active selection (only ID is "state"; everything else is derived)
+let _activeScriptId = null;
+let _firedCueIdx = new Set();
 
-function curScript() {
-  return GUIDED_LIBRARY.find(g => g.id === _state.scriptId);
+export function getActiveScript() {
+  return GUIDED_LIBRARY.find(g => g.id === _activeScriptId) || null;
 }
 
-function fmt(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
-
-function setUI() {
-  const lib = curScript();
-  const el = document.getElementById('gm-readout'); if (el) el.textContent = fmt(_state.secs);
-  const ph = document.getElementById('gm-phase');
-  if (ph) ph.textContent = !_state.running ? (_state.secs > 0 ? 'PAUSED' : 'READY') : 'GUIDED';
-  const btn = document.getElementById('gm-btn'); if (btn) btn.textContent = _state.running ? '⏸' : '▶';
-  const titleEl = document.getElementById('gm-current'); if (titleEl) titleEl.textContent = lib ? `${lib.icon} ${lib.name}` : '—';
-  const ring = document.getElementById('gm-ring');
-  if (ring && _state.total) {
-    const circ = 565.5;
-    const pct = Math.max(0, Math.min(1, _state.secs / _state.total));
-    ring.style.strokeDashoffset = String(circ * pct);
+export function selectGuided(id) {
+  if (_activeScriptId === id) {
+    // Tap an already-active guide to clear it (silent meditation)
+    clearGuided(); return;
   }
-}
-
-export function startGuided(id) {
-  const lib = GUIDED_LIBRARY.find(g => g.id === id); if (!lib) return;
-  stopGuided(true);
-  _state.scriptId = id;
-  _state.total = lib.mins * 60;
-  _state.secs = _state.total;
-  _state.firedIdx = 0;
-  _state.running = true;
-  if (lib.sound) playAmbient(lib.sound); else stopAmbient();
-  playChime('start');
-  window.reqWL?.();
-  setUI();
-  _state.int = setInterval(tick, 1000);
-}
-
-function tick() {
-  const lib = curScript(); if (!lib) return stopGuided();
-  // Fire cues whose offset has been reached.
-  const elapsed = _state.total - _state.secs;
-  while (_state.firedIdx < lib.cues.length && lib.cues[_state.firedIdx][0] <= elapsed) {
-    const [, text] = lib.cues[_state.firedIdx];
-    speak(text, { rate: 0.92, pitch: 1.0, volume: 1.0 });
-    _state.firedIdx++;
+  _activeScriptId = id;
+  resetCueFiringState();
+  const lib = GUIDED_LIBRARY.find(g => g.id === id);
+  if (lib) {
+    const dur = document.getElementById('med-dur');
+    if (dur) { dur.value = lib.mins; window.medReset?.(); }
   }
-  _state.secs--;
-  setUI();
-  if (_state.secs <= 0) finishGuided();
+  renderGuidedTab();
+  highlightClearButton();
+  window.toast?.(`🌿 ${lib?.name || 'Guided'} selected`);
 }
 
-export function pauseGuided() {
-  if (!_state.running) return;
-  clearInterval(_state.int); _state.int = null; _state.running = false;
-  try { window.speechSynthesis?.pause?.(); } catch {}
-  setUI(); window.relWL?.();
+export function clearGuided() {
+  _activeScriptId = null;
+  resetCueFiringState();
+  renderGuidedTab();
+  highlightClearButton();
 }
 
-export function resumeGuided() {
-  if (_state.running || !_state.scriptId || _state.secs <= 0) return;
-  _state.running = true;
-  try { window.speechSynthesis?.resume?.(); } catch {}
-  _state.int = setInterval(tick, 1000); window.reqWL?.();
-  setUI();
+export function resetCueFiringState() {
+  _firedCueIdx = new Set();
 }
 
-export function toggleGuided() {
-  if (!_state.scriptId) return;
-  if (_state.running) pauseGuided(); else resumeGuided();
-}
-
-export function stopGuided(silent = false) {
-  clearInterval(_state.int);
-  _state.int = null; _state.running = false;
-  try { window.speechSynthesis?.cancel?.(); } catch {}
-  stopAmbient();
-  window.relWL?.();
-  if (!silent) {
-    const lib = curScript();
-    const completed = lib && _state.total > 0 ? Math.max(1, Math.round((_state.total - _state.secs) / 60)) : 0;
-    if (completed >= 1) {
-      logGuidedSession(lib, completed);
+// Called from medToggle's tick. Fires cues whose scaled offset has been reached.
+// `elapsedSec` is total elapsed seconds; `totalSec` is the chosen total.
+export function tickGuidedCues(elapsedSec, totalSec) {
+  const lib = getActiveScript(); if (!lib) return;
+  const baseTotal = lib.mins * 60;
+  const scale = baseTotal > 0 ? (totalSec / baseTotal) : 1;
+  lib.cues.forEach((cue, i) => {
+    if (_firedCueIdx.has(i)) return;
+    const scaledAt = cue[0] * scale;
+    if (elapsedSec >= scaledAt) {
+      _firedCueIdx.add(i);
+      speak(cue[1], { rate: 0.92, pitch: 1.02 });
     }
-  }
-  _state.scriptId = null; _state.secs = 0; _state.total = 0; _state.firedIdx = 0;
-  setUI();
-}
-
-function finishGuided() {
-  const lib = curScript();
-  clearInterval(_state.int); _state.int = null; _state.running = false;
-  playChime('end'); haptic('success'); stopAmbient();
-  if (lib) logGuidedSession(lib, lib.mins);
-  _state.scriptId = null; _state.secs = 0; _state.total = 0; _state.firedIdx = 0;
-  setUI();
-  window.toast?.('Guided session complete ✓');
-  window.relWL?.();
-}
-
-function logGuidedSession(lib, min) {
-  if (!S.meditation.sessions) S.meditation.sessions = [];
-  S.meditation.sessions.push({ date: today(), min, ts: Date.now(), label: lib?.name || 'Guided', guided: lib?.id || null });
-  save();
-  window.awardXP?.('medSession');
-  window.renderMedStats?.(); window.renderHeatmaps?.(); window.renderDash?.();
+  });
 }
 
 // ── UI ──────────────────────────────────────────────────────────────────────
-export function renderGuidedTab() {
-  const list = document.getElementById('gm-list'); if (!list) return;
-  list.innerHTML = GUIDED_LIBRARY.map(g => `
-    <button class="guided-card" onclick="startGuided('${g.id}')" data-id="${g.id}">
-      <span class="gc-icon">${g.icon}</span>
-      <div class="gc-info">
-        <div class="gc-name">${g.name}</div>
-        <div class="gc-meta">${g.mins} min${g.sound ? ' · ' + g.sound : ''}</div>
-        <div class="gc-desc">${g.desc}</div>
-      </div>
-      <span class="gc-play">▶</span>
-    </button>
-  `).join('');
-  setUI();
+function highlightClearButton() {
+  const el = document.getElementById('gm-clear');
+  if (el) el.style.display = _activeScriptId ? '' : 'none';
 }
 
-window.startGuided = startGuided;
-window.toggleGuided = toggleGuided;
-window.stopGuided = () => stopGuided();
-window.renderGuidedTab = renderGuidedTab;
-window.GUIDED_LIBRARY = GUIDED_LIBRARY;
+export function renderGuidedTab() {
+  const list = document.getElementById('gm-list'); if (!list) return;
+  list.innerHTML = GUIDED_LIBRARY.map(g => {
+    const active = g.id === _activeScriptId;
+    return `<button class="guided-card${active ? ' active' : ''}" onclick="selectGuided('${g.id}')" data-id="${g.id}">
+      <span class="gc-icon">${g.icon}</span>
+      <div class="gc-info">
+        <div class="gc-name">${g.name}${active ? ' <span style="color:var(--teal);font-size:11px">· active</span>' : ''}</div>
+        <div class="gc-meta">${g.mins} min default</div>
+        <div class="gc-desc">${g.desc}</div>
+      </div>
+      <span class="gc-play">${active ? '✓' : '▶'}</span>
+    </button>`;
+  }).join('');
+  highlightClearButton();
+}
+
+if (typeof window !== 'undefined') {
+  window.GUIDED_LIBRARY = GUIDED_LIBRARY;
+  window.selectGuided = selectGuided;
+  window.clearGuided = clearGuided;
+  window.renderGuidedTab = renderGuidedTab;
+  window.tickGuidedCues = tickGuidedCues;
+  window.resetCueFiringState = resetCueFiringState;
+  window.getActiveScript = getActiveScript;
+}

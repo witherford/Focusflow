@@ -2,6 +2,7 @@
 import { S, today, uid, f2, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
 import { playChime } from '../../core/audio.js';
+import { tickGuidedCues, resetCueFiringState, getActiveScript } from './guided.js';
 
 const medCfg = () => (S.meditation.cfg ||= { sounds: true, fullscreen: false });
 const medSoundsOn = () => medCfg().sounds;
@@ -25,10 +26,16 @@ export function medToggle() {
     document.getElementById('med-phase').textContent = 'PAUSED';
     window.relWL();
   } else {
-    if (medSecs === 0) medSecs = medDur();
+    const total = medDur();
+    if (medSecs === 0) {
+      medSecs = total;
+      // Fresh start — clear any cues already fired from a previous session.
+      resetCueFiringState();
+    }
     medRunning = true;
     document.getElementById('med-btn').textContent = '⏸';
-    document.getElementById('med-phase').textContent = 'MEDITATING';
+    const script = getActiveScript();
+    document.getElementById('med-phase').textContent = script ? 'GUIDED · ' + script.name.toUpperCase() : 'MEDITATING';
     window.reqWL();
     if (medSoundsOn()) playChime('start');
     if (medFullscreenOn()) medFullscreen();
@@ -36,7 +43,10 @@ export function medToggle() {
       medSecs--;
       const el = document.getElementById('med-timer'); if (el) el.textContent = fmtSecs(medSecs);
       const ring = document.querySelector('.med-ring-progress');
-      if (ring) { const total = medDur(), circ = 678.6; ring.style.strokeDashoffset = Math.max(0, circ * (medSecs / total)); }
+      if (ring) { const t = total || medDur(), circ = 678.6; ring.style.strokeDashoffset = Math.max(0, circ * (medSecs / t)); }
+      // Fire guided cues if a script is active, scaled to the chosen duration.
+      const elapsed = (total || medDur()) - medSecs;
+      tickGuidedCues(elapsed, total || medDur());
       updateMedProg();
       if (medSecs <= 0) {
         clearInterval(medInt); medRunning = false; window.relWL();
@@ -44,7 +54,10 @@ export function medToggle() {
         document.getElementById('med-phase').textContent = 'COMPLETE ✓';
         haptic('success');
         if (medSoundsOn()) playChime('end');
-        logMed(parseInt(document.getElementById('med-dur')?.value || 10));
+        // Log the actual elapsed minutes (floor — 10s of a 5min timer ≠ 5min).
+        const t2 = total || medDur();
+        const elapsedMin = Math.floor(t2 / 60);
+        if (elapsedMin >= 1) logMed(elapsedMin);
         medSecs = 0;
         window.closeFullscreenTimer?.();
       }
@@ -90,7 +103,25 @@ export function resetTodayMed() {
   window.toast?.(`Reset · removed ${todays.length} session${todays.length === 1 ? '' : 's'}`);
 }
 export function medReset() { clearInterval(medInt); medRunning = false; medSecs = 0; window.relWL(); const el = document.getElementById('med-timer'); if (el) el.textContent = f2(medDur() / 60) + ':00'; const ph = document.getElementById('med-phase'); if (ph) ph.textContent = 'READY'; const btn = document.getElementById('med-btn'); if (btn) btn.textContent = '▶'; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; }
-export function medSkip() { if (!medRunning && medSecs === 0) return; clearInterval(medInt); medRunning = false; window.relWL(); const elapsed = Math.max(1, Math.round((medDur() - medSecs) / 60)); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'LOGGED ✓'; logMed(elapsed); medSecs = 0; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; window.toast('Session logged: ' + elapsed + ' min ✓'); }
+export function medSkip() {
+  if (!medRunning && medSecs === 0) return;
+  clearInterval(medInt); medRunning = false; window.relWL();
+  // Use floor — 10 seconds is 0 minutes, 90 seconds is 1 minute. Don't round up.
+  const elapsedSec = Math.max(0, medDur() - medSecs);
+  const elapsedMin = Math.floor(elapsedSec / 60);
+  document.getElementById('med-btn').textContent = '▶';
+  if (elapsedMin >= 1) {
+    logMed(elapsedMin);
+    document.getElementById('med-phase').textContent = 'LOGGED ✓';
+    window.toast(`Session logged: ${elapsedMin} min ✓`);
+  } else {
+    document.getElementById('med-phase').textContent = 'TOO SHORT';
+    window.toast(`Need 1 min — only ${elapsedSec}s logged (not saved)`);
+  }
+  medSecs = 0;
+  const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6';
+  window.closeFullscreenTimer?.();
+}
 export function logMed(min) { if (!S.meditation.sessions) S.meditation.sessions = []; S.meditation.sessions.push({ date: today(), min: min || parseInt(document.getElementById('med-dur')?.value || 10), ts: Date.now() }); save(); renderMedStats(); window.renderHeatmaps(); updateMedProg(); }
 function updateMedProg() { const target = S.meditation.target || parseInt(document.getElementById('med-target')?.value || 10); const done = S.meditation.sessions.filter(s => s.date === today()).reduce((a, s) => a + s.min, 0); const pct = Math.min(100, Math.round(done / target * 100)); const fill = document.getElementById('med-prog-fill'); if (fill) fill.style.width = pct + '%'; const lbl = document.getElementById('med-prog-label'); if (lbl) lbl.textContent = done + ' / ' + target + ' min'; }
 export function saveMedTarget() { S.meditation.target = parseInt(document.getElementById('med-target')?.value || 10); save(); updateMedProg(); }

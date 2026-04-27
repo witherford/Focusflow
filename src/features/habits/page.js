@@ -80,9 +80,29 @@ function wireGestures(container) {
       },
     });
   });
+  // Belt + braces: also attach pointerdown/up blockers directly to each
+  // action button so events can never reach the row's gesture handler.
+  // Re-runs every render but the buttons are fresh DOM each time so it's safe.
+  container.querySelectorAll('[data-habit-action]').forEach(btn => {
+    const stop = ev => { ev.stopPropagation(); };
+    btn.addEventListener('pointerdown', stop);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointermove', stop);
+  });
+
   // Delegate edit/delete clicks — attach ONCE per container (idempotent).
   if (!container._habitActionWired) {
     container._habitActionWired = true;
+    // Capture-phase guard: stop pointer events for action buttons before they
+    // bubble to the gesture handler on .habit-row. This prevents the long-press
+    // / tap counter from ever firing for an edit / delete press, no matter
+    // what happens after.
+    container.addEventListener('pointerdown', e => {
+      if (e.target.closest('[data-habit-action]')) e.stopPropagation();
+    }, true);
+    container.addEventListener('pointerup', e => {
+      if (e.target.closest('[data-habit-action]')) e.stopPropagation();
+    }, true);
     container.addEventListener('click', e => {
       const btn = e.target.closest('[data-habit-action]'); if (!btn) return;
       e.stopPropagation();

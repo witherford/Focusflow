@@ -287,6 +287,8 @@
 .guided-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; color: var(--text); }
 .guided-card:hover { border-color: var(--teal); background: var(--teal-bg); }
 .guided-card:active { transform: scale(0.98); }
+.guided-card.active { border-color: var(--teal); background: var(--teal-bg); box-shadow: 0 0 0 2px rgba(62,207,176,0.2); }
+.guided-card.active .gc-play { color: var(--green); }
 .guided-card .gc-icon { font-size: 28px; flex-shrink: 0; }
 .guided-card .gc-info { flex: 1; min-width: 0; }
 .guided-card .gc-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }

@@ -348,8 +348,7 @@
 
   <div class="tabs-wrap">
     <div class="tabs">
-      <div class="tab active" data-tab="med-tab-timer">🧘 Timer</div>
-      <div class="tab" data-tab="med-tab-guided">🌿 Guided</div>
+      <div class="tab active" data-tab="med-tab-timer">🧘 Meditation</div>
       <div class="tab" data-tab="med-tab-breath">🫁 Breathing</div>
       <div class="tab" data-tab="med-tab-saved">⭐ Saved</div>
       <div class="tab" data-tab="med-tab-stats">📊 Stats</div>
@@ -410,7 +409,7 @@
     </div>
 
     <div class="card" style="margin-top:14px">
-      <div class="card-header"><div class="card-title">Quick Presets</div></div>
+      <div class="card-header"><div class="card-title">Quick presets · duration</div><div style="font-size:11px;color:var(--text3)">applies to silent or guided</div></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="med-quick-presets">
         <button class="med-preset-quick" onclick="setMedDur(5)">5 min</button>
         <button class="med-preset-quick" onclick="setMedDur(10)">10 min</button>
@@ -422,28 +421,11 @@
         <button class="med-preset-quick" onclick="setMedDur(90)">90 min</button>
       </div>
     </div>
-  </div>
 
-  <!-- GUIDED TAB -->
-  <div id="med-tab-guided" class="tab-content section" style="display:none">
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-header"><div class="card-title">🌿 Now playing</div><div style="font-size:11px;color:var(--text3)" id="gm-current">—</div></div>
-      <div class="timer-ring" style="margin:10px auto 6px">
-        <svg viewBox="0 0 200 200"><circle class="timer-ring-bg" cx="100" cy="100" r="90"/><circle class="timer-ring-fill" id="gm-ring" cx="100" cy="100" r="90" style="stroke:var(--teal);filter:drop-shadow(0 0 8px var(--teal))"/></svg>
-        <div class="timer-inner">
-          <div class="timer-time" id="gm-readout">00:00</div>
-          <div class="timer-phase" id="gm-phase">READY</div>
-        </div>
-      </div>
-      <div class="timer-controls">
-        <button class="timer-btn timer-btn-secondary" onclick="stopGuided()" title="Stop">⏹</button>
-        <button class="timer-btn timer-btn-primary" id="gm-btn" onclick="toggleGuided()">▶</button>
-      </div>
-      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px">Spoken via your device’s voice. Wear headphones if you’re sharing space.</div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title">Library</div></div>
+    <div class="card" style="margin-top:14px">
+      <div class="card-header"><div class="card-title">🌿 Guided meditation</div><div style="font-size:11px;color:var(--text3)">spoken cues over your chosen duration</div></div>
       <div id="gm-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="btn btn-sm" id="gm-clear" onclick="clearGuided()" style="display:none">⏹ Silent (clear guide)</button></div>
     </div>
   </div>
 
