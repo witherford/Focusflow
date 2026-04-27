@@ -4,6 +4,7 @@ import { save } from '../../core/persistence.js';
 import { progressRing } from '../../ui/progressRing.js';
 import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { metOn } from '../habits/counterMode.js';
+import { effectivePeriodKey } from '../chores/period.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
 import { renderAllDay } from './allDay.js';
 import { renderCheckin } from './checkin.js';
@@ -210,7 +211,14 @@ export function renderTimeblocks() {
 }
 
 export function toggleHabitDash(id) { if (!S.habitLog[today()]) S.habitLog[today()] = {}; S.habitLog[today()][id] = !S.habitLog[today()][id]; haptic('medium'); save(); renderDash(); }
-export function toggleChoreDash(id) { if (!S.choreLog[weekKey()]) S.choreLog[weekKey()] = {}; S.choreLog[weekKey()][id] = !S.choreLog[weekKey()][id]; haptic('light'); save(); renderDash(); }
+export function toggleChoreDash(id) {
+  const c = S.chores.find(x => x.id === id); if (!c) return;
+  const key = effectivePeriodKey(c);
+  if (!S.choreLog[key]) S.choreLog[key] = {};
+  S.choreLog[key][id] = !S.choreLog[key][id];
+  if (S.choreLog[key][id]) c.lastDoneAt = today();
+  haptic('light'); save(); renderDash();
+}
 export function toggleTaskQuick(id) { const t = S.tasks.find(x => x.id === id); if (!t) return; const wasDone = t.done; t.done = !t.done; t.doneAt = t.done ? today() : null; haptic('medium'); save(); if (!wasDone && t.done) window.awardXP?.(t.priority === 'high' ? 'taskHighPri' : 'task'); renderDash(); }
 
 // Bad Habit modal

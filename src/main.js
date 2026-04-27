@@ -16,12 +16,25 @@ import './styles/layout.css';
 import './styles/components.css';
 import './styles/pages.css';
 
+// App version (visible in sidebar logo)
+import { APP_VERSION } from './core/version.js';
+
 // Register service worker (vite-plugin-pwa)
 import { registerSW } from 'virtual:pwa-register';
 const updateSW = registerSW({
-  onNeedRefresh() { console.log('[pwa] new content available — will auto-update'); },
+  onNeedRefresh() {
+    console.log('[pwa] new content available');
+    window._ffUpdateAvailable = true;
+    try { window.toast?.('New version ready — Update from Settings'); } catch {}
+    window.dispatchEvent(new CustomEvent('ff:update-available'));
+  },
   onOfflineReady() { console.log('[pwa] app ready for offline use'); },
 });
+// Expose updater so the Settings button can trigger a skip-waiting reload.
+window.ffUpdateApp = (reload = true) => { try { return updateSW(reload); } catch (e) { console.warn(e); } };
+window.ffCheckForUpdate = () => {
+  try { return navigator.serviceWorker?.getRegistration?.().then(r => r?.update?.()); } catch (e) { console.warn(e); }
+};
 
 // Core
 import { S } from './core/state.js';
@@ -51,7 +64,9 @@ import { renderGoals } from './features/goals/page.js';
 import { renderDwLog, renderPresets } from './features/deepwork/page.js';
 import { renderMedStats, renderSavedTimers, renderBreathPresets, renderHeatmaps } from './features/meditation/page.js';
 import { renderShop } from './features/shopping/page.js';
-import { renderFitness } from './features/fitness/page.js';
+import { renderTraining as renderFitness } from './features/fitness/page.js';
+import './features/fitness/workout.js';
+import './features/fitness/calendar.js';
 import './ui/fullscreenTimer.js';
 import { renderJournal } from './features/journal/page.js';
 import { renderProfile, attachAutoSave, applyAIVis, initRoutineDays } from './features/profile/page.js';
@@ -153,6 +168,10 @@ checkBadges();
 applyFeatureVisibility();
 startIconNormalizer();
 startOnboarding();
+
+// Show app version in sidebar header.
+const _verEl = document.getElementById('logoVersion');
+if (_verEl) _verEl.textContent = 'V' + APP_VERSION;
 
 // Nav haptic patch
 document.querySelectorAll('.mob-nav-item,.nav-item').forEach(el => {

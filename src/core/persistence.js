@@ -51,6 +51,7 @@ function extractCore(state) {
     gamification: state.gamification || null,
     bodyMeasurements: state.bodyMeasurements || [],
     sleepLog: state.sleepLog || [],
+    training: state.training || null,
   };
 }
 
@@ -71,6 +72,7 @@ function mergeCore(core) {
     gamification: core.gamification || null,
     bodyMeasurements: core.bodyMeasurements || [],
     sleepLog: core.sleepLog || [],
+    training: core.training || null,
   });
   // Merge into existing nested objects so we don't clobber sessions arrays
   S.deepwork = { ...S.deepwork, target: core.deepwork.target, presets: core.deepwork.presets };
@@ -254,7 +256,7 @@ if (typeof document !== 'undefined') {
 // ── Categories ───────────────────────────────────────────────────────────────
 export const BASE_SHOP = ['Protein','Vegetables','Fruit','Grains & Carbs','Dairy & Eggs','Healthy Fats','Snacks','Drinks','Supplements','Other'];
 export const BASE_PROJ = ['work','personal','health','learning','finance','other'];
-export const BASE_GOAL = ['career','health','learning','personal','finance'];
+export const BASE_GOAL = ['career','health','training','learning','personal','finance'];
 export const CAT_ICONS = { 'Protein':'🥩','Vegetables':'🥦','Fruit':'🍎','Grains & Carbs':'🌾','Dairy & Eggs':'🥛','Healthy Fats':'🥑','Snacks':'🍿','Drinks':'💧','Supplements':'💊','Other':'📦' };
 
 export const shopCats = () => [...BASE_SHOP, ...(S.customCats.shop || [])];

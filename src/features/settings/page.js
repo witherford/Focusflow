@@ -6,6 +6,7 @@ import { renderBackupList } from '../../core/backup.js';
 import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
 import { renderCloudSyncSection } from './cloudSyncUI.js';
 import { renderFeatureToggles, applyFeatureVisibility } from './featureToggles.js';
+import { renderUpdaterSection } from '../../core/updater.js';
 
 export function renderPasscodeSection() {
   renderReminderSection();
@@ -13,6 +14,7 @@ export function renderPasscodeSection() {
   renderFeatureToggles();
   renderWidgetSettings();
   renderCloudSyncSection();
+  renderUpdaterSection();
   applyFeatureVisibility();
   const set = document.getElementById('passcode-set');
   const manage = document.getElementById('passcode-manage');

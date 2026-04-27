@@ -165,7 +165,7 @@ export function toggleAI() { S.settings.aiEnabled = document.getElementById('ai-
 export function applyAIVis() {
   const on = S.settings.aiEnabled !== false;
   const cb = document.getElementById('ai-toggle'); if (cb) cb.checked = on;
-  ['ai-plan-banner','shop-ai-banner'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; });
+  ['ai-plan-banner'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; });
 }
 
 window.renderProfile = renderProfile;

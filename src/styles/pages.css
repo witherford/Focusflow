@@ -286,6 +286,28 @@
 .menu-btn { background: transparent; border: none; color: var(--text2); font-size: 18px; padding: 6px 10px; cursor: pointer; }
 .menu-btn:hover { color: var(--text); }
 
+/* Training page — routine cards + workout logger + schedule */
+.routine-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; color: var(--text); }
+.routine-card:hover { border-color: var(--violet); }
+.routine-card.active { border-color: var(--teal); background: var(--teal-bg); box-shadow: 0 0 0 2px rgba(62,207,176,0.2); }
+.routine-card .rc-info { flex: 1; min-width: 0; }
+.routine-card .rc-name { font-weight: 700; font-size: 14px; }
+.routine-card .rc-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.routine-card .rc-meta { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: 'DM Mono', monospace; }
+.routine-card .rc-cta { font-size: 18px; color: var(--violet); flex-shrink: 0; }
+
+.wo-exercise { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; }
+.wo-set { width: 44px; height: 36px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); font-family: 'DM Mono', monospace; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.wo-set.done { background: var(--green); color: #fff; border-color: var(--green); }
+.wo-set:active { transform: scale(0.94); }
+.wo-set-add { color: var(--text3); border-style: dashed; }
+
+/* Training calendar squares */
+.cal-day.tr-planned { border-color: var(--violet); background: rgba(124,110,247,0.06); }
+.cal-day.tr-done { background: rgba(92,200,122,0.18); border-color: var(--green); }
+.cal-day.tr-missed { border-color: var(--rose); }
+.cal-day.tr-rest { opacity: 0.5; }
+
 /* Guided meditation cards */
 .guided-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; color: var(--text); }
 .guided-card:hover { border-color: var(--teal); background: var(--teal-bg); }
