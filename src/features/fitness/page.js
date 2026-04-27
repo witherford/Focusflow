@@ -10,6 +10,7 @@ import { save } from '../../core/persistence.js';
 import { ROUTINE_LIBRARY, getRoutine, dayLabelForDate } from './routines.js';
 import { activeRoutine, activateRoutine, openWorkoutLogger } from './workout.js';
 import { renderTrainingSchedule } from './calendar.js';
+import { estimate1RM } from './progression.js';
 
 const MOD_TYPE_META = {
   weightlifting: { icon: '🏋️', label: 'Weightlifting', fields: ['sets', 'reps', 'weight'] },
@@ -269,7 +270,8 @@ export function renderWeightProgression() {
     for (const e of (h.exercises || [])) {
       const top = (e.sets || []).reduce((mx, s) => ((s.weight || 0) > (mx?.weight || 0) ? s : mx), null);
       if (!top) continue;
-      (byExercise[e.exercise] ||= []).push({ ts: h.ts, date: h.date, weight: top.weight });
+      const e1rm = estimate1RM(top.weight, top.reps);
+      (byExercise[e.exercise] ||= []).push({ ts: h.ts, date: h.date, weight: top.weight, reps: top.reps, e1rm });
     }
   }
   // Also fold in legacy modality sessions
@@ -281,21 +283,36 @@ export function renderWeightProgression() {
   }
   const exNames = Object.keys(byExercise);
   if (!exNames.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="card-header"><div class="card-title">📈 Lift progression</div></div>
+  el.innerHTML = `<div class="card-header"><div class="card-title">📈 Lift progression</div><div style="font-size:11px;color:var(--text3)">top set + estimated 1RM</div></div>
     ${exNames.map(name => {
       const list = byExercise[name].sort((a, b) => a.ts - b.ts);
-      const w = 300, h = 50;
-      const max = Math.max(...list.map(s => s.weight));
-      const min = Math.min(...list.map(s => s.weight));
+      const w = 300, h = 60;
+      const maxW = Math.max(...list.map(s => s.weight));
+      const minW = Math.min(...list.map(s => s.weight));
+      const max1 = Math.max(...list.map(s => s.e1rm || 0));
+      const max = Math.max(maxW, max1);
+      const min = Math.min(minW, ...list.map(s => s.e1rm || s.weight));
       const range = Math.max(1, max - min);
-      const pts = list.map((s, i) => {
+      const ptsW = list.map((s, i) => {
         const x = (i / Math.max(1, list.length - 1)) * w;
         const y = h - ((s.weight - min) / range) * h;
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       }).join(' ');
+      const pts1 = list.map((s, i) => {
+        const x = (i / Math.max(1, list.length - 1)) * w;
+        const y = h - (((s.e1rm || s.weight) - min) / range) * h;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      const last = list[list.length - 1];
       return `<div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span style="font-weight:500">${name}</span><span style="color:var(--text3)">${min}→${max}kg · ${list.length}</span></div>
-        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px"><polyline points="${pts}" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linejoin="round"/></svg>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+          <span style="font-weight:500">${name}</span>
+          <span style="color:var(--text3);font-family:'DM Mono',monospace">${minW}→${maxW}kg · e1RM ${last?.e1rm || 0}</span>
+        </div>
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px">
+          <polyline points="${pts1}" fill="none" stroke="var(--teal)" stroke-width="1.4" stroke-dasharray="3 3" stroke-linejoin="round"/>
+          <polyline points="${ptsW}" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
       </div>`;
     }).join('')}
   `;

@@ -3,7 +3,9 @@
 // S.training.history and S.fitness.sessions.
 import { S, today, uid, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
-import { ROUTINE_LIBRARY, getRoutine, dayLabelForDate, lastSessionOf, suggestNextWeight } from './routines.js';
+import { ROUTINE_LIBRARY, getRoutine, dayLabelForDate, lastSessionOf } from './routines.js';
+import { suggestNext, estimate1RM, bestSet1RM, platesString, perLiftRate, COMPOUND_LIFTS, getStartingWeight, setStartingWeight } from './progression.js';
+import { startRest, stopRest } from './restTimer.js';
 
 let _state = { routineId: null, dayLabel: null, exercises: [] };
 
@@ -23,7 +25,18 @@ export function activateRoutine(id) {
   const t = ensureTraining();
   t.activeRoutineId = id;
   save();
-  // Optional auto-habit creation — prompt once per activation.
+  // First time we activate any routine: prompt for the user's current
+  // working weights for the compound lifts.
+  const haveStarting = t.startingWeights && Object.keys(t.startingWeights).length > 0;
+  if (!haveStarting) {
+    openStartingWeightsWizard(id);
+  } else {
+    afterRoutineActivated(id);
+  }
+}
+
+function afterRoutineActivated(id) {
+  const t = ensureTraining();
   if (t.autoHabit !== false && !t._habitsCreatedFor?.includes(id)) {
     if (confirm('Create matching daily habits for each scheduled training day?')) {
       createTrainingHabits(id);
@@ -33,6 +46,62 @@ export function activateRoutine(id) {
   }
   window.toast?.('Routine activated ✓');
   window.renderTraining?.();
+}
+
+// ── Starting-weight wizard ───────────────────────────────────────────────────
+export function openStartingWeightsWizard(routineId) {
+  ensureWizardModal();
+  const t = ensureTraining();
+  COMPOUND_LIFTS.forEach(lift => {
+    const el = document.getElementById('sw-' + slug(lift));
+    if (el) el.value = t.startingWeights?.[lift] ?? '';
+  });
+  document.getElementById('sw-routine-id').value = routineId || '';
+  document.getElementById('m-starting-weights').style.display = 'flex';
+}
+
+function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+
+function ensureWizardModal() {
+  if (document.getElementById('m-starting-weights')) return;
+  const html = `<div class="modal-overlay" id="m-starting-weights" style="display:none"><div class="modal" style="max-width:440px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏁 Starting weights</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+      Enter the weight you can currently lift for each compound lift (one set, comfortably). Blank = use the routine default. Pick something a touch under your real working weight — linear progression is much faster than starting too heavy.
+    </div>
+    <input type="hidden" id="sw-routine-id">
+    <div class="form-grid">
+      ${COMPOUND_LIFTS.map(lift => `<div class="form-row"><label>${lift}</label><input type="number" inputmode="decimal" step="0.5" id="sw-${slug(lift)}" placeholder="kg"></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveStartingWeights()">Save</button>
+      <button class="btn" onclick="closeModal('m-starting-weights');afterStartingWeightsCancel()">Skip</button>
+    </div>
+  </div></div>`;
+  const wrap = document.createElement('div'); wrap.innerHTML = html;
+  document.body.appendChild(wrap.firstChild);
+}
+
+export function saveStartingWeights() {
+  const t = ensureTraining();
+  let saved = 0;
+  for (const lift of COMPOUND_LIFTS) {
+    const v = parseFloat(document.getElementById('sw-' + slug(lift))?.value);
+    if (isFinite(v) && v >= 0) { setStartingWeight(lift, v); saved++; }
+  }
+  save();
+  window.toast?.(`Starting weights saved (${saved})`);
+  const rid = document.getElementById('sw-routine-id')?.value;
+  window.closeModal?.('m-starting-weights');
+  afterRoutineActivated(rid || t.activeRoutineId);
+}
+
+if (typeof window !== 'undefined') {
+  window.afterStartingWeightsCancel = () => {
+    const t = ensureTraining();
+    afterRoutineActivated(t.activeRoutineId);
+  };
 }
 
 function createTrainingHabits(routineId) {
@@ -71,13 +140,14 @@ export function openWorkoutLogger(forcedDayLabel) {
     routineId: r.id,
     dayLabel: dl === 'rest' ? Object.keys(r.days || {})[0] || 'A' : dl,
     exercises: dayPlan.map(ex => {
-      const suggested = suggestNextWeight(ex, r.progression, last);
+      const sug = suggestNext(ex, r, last);
       return {
         exercise: ex.exercise,
         targetSets: ex.sets,
         targetReps: ex.reps,
-        weight: suggested,
-        sets: Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: suggested, done: false })),
+        weight: sug.weight,
+        suggestion: sug,
+        sets: Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: sug.weight, done: false })),
       };
     }),
   };
@@ -109,14 +179,29 @@ function renderLoggerModal() {
   document.getElementById('wo-title').textContent = `${r?.name || 'Workout'} · ${_state.dayLabel}`;
   document.getElementById('wo-meta').textContent = today();
   const wrap = document.getElementById('wo-exercises');
-  wrap.innerHTML = _state.exercises.map((ex, i) => `
+  wrap.innerHTML = _state.exercises.map((ex, i) => {
+    const sug = ex.suggestion || {};
+    const e1rm = estimate1RM(ex.weight, ex.targetReps);
+    const plates = platesString(ex.weight);
+    const hintColor = sug.deloaded ? 'var(--rose)' : sug.reason === 'progress' ? 'var(--green)' : 'var(--text3)';
+    const hint = sug.reason === 'progress' ? `↑ +${(ex.weight - (sug.weight - perDelta(ex, r))).toFixed?.(1) || ''} new top set`
+              : sug.deloaded ? `⚠ deload — work back up`
+              : sug.reason === 'starting' ? 'starting weight'
+              : sug.reason && sug.reason.startsWith('hold') ? `↻ ${sug.reason}`
+              : '';
+    return `
     <div class="wo-exercise">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <span style="font-weight:600">${ex.exercise}</span>
         <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${ex.targetSets}×${ex.targetReps}</span>
         <span style="flex:1"></span>
         <input type="number" step="0.5" inputmode="decimal" value="${ex.weight}" oninput="setExerciseWeight(${i}, this.value)" style="width:80px;font-family:'DM Mono',monospace" placeholder="kg">
         <span style="font-size:11px;color:var(--text3)">kg</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;flex-wrap:wrap">
+        ${hint ? `<span style="color:${hintColor}">${hint}</span>` : ''}
+        <span style="color:var(--text3)">e1RM ≈ <strong style="color:var(--text2)">${e1rm || '—'}</strong> kg</span>
+        <span style="color:var(--text3);cursor:pointer;text-decoration:underline" onclick="showPlatesFor(${i})" title="Plate calculator">🪙 ${plates}</span>
       </div>
       <div class="wo-sets" style="display:flex;flex-wrap:wrap;gap:6px">
         ${ex.sets.map((s, j) => `
@@ -127,7 +212,15 @@ function renderLoggerModal() {
         <button class="wo-set wo-set-add" onclick="addWorkoutSet(${i})">+</button>
       </div>
     </div>
-  `).join('') || '<div class="caption" style="text-align:center;padding:14px">No exercises planned for this day. Edit the routine in Settings → Routines (coming).</div>';
+  `;
+  }).join('') || '<div class="caption" style="text-align:center;padding:14px">No exercises planned for this day. Pick a routine to populate the workout.</div>';
+}
+
+function perDelta(ex, r) { return perLiftRate(ex.exercise, r); }
+
+export function showPlatesFor(i) {
+  const ex = _state.exercises[i]; if (!ex) return;
+  alert(`${ex.exercise} @ ${ex.weight} kg\n${platesString(ex.weight)}`);
 }
 
 export function setExerciseWeight(idx, val) {
@@ -142,7 +235,14 @@ export function toggleWorkoutSet(i, j) {
   const ex = _state.exercises[i]; if (!ex) return;
   const s = ex.sets[j]; if (!s) return;
   s.done = !s.done;
-  if (s.done) { s.weight = ex.weight; s.reps = s.reps || ex.targetReps; haptic('light'); }
+  if (s.done) {
+    s.weight = ex.weight; s.reps = s.reps || ex.targetReps; haptic('light');
+    // Start a rest timer between sets unless this was the last set of the workout.
+    const isLastSet = i === _state.exercises.length - 1 && j === ex.sets.length - 1;
+    if (!isLastSet) startRest(ex.exercise);
+  } else {
+    stopRest(false);
+  }
   renderLoggerModal();
 }
 
@@ -236,4 +336,7 @@ if (typeof window !== 'undefined') {
   window.setExerciseWeight = setExerciseWeight;
   window.activateRoutine = activateRoutine;
   window.activeRoutine = activeRoutine;
+  window.showPlatesFor = showPlatesFor;
+  window.openStartingWeightsWizard = openStartingWeightsWizard;
+  window.saveStartingWeights = saveStartingWeights;
 }

@@ -302,6 +302,16 @@
 .wo-set:active { transform: scale(0.94); }
 .wo-set-add { color: var(--text3); border-style: dashed; }
 
+/* Rest timer — fixed bottom-center, above mob-nav */
+.rest-timer { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 110; background: var(--bg2); border: 1px solid var(--violet); border-radius: var(--r); box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 12px 16px; min-width: 240px; max-width: 92%; }
+.rest-timer .rt-inner { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rest-timer .rt-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+.rest-timer .rt-time { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 600; color: var(--text); }
+.rest-timer .rt-bar { width: 100%; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.rest-timer .rt-bar-fill { height: 100%; background: linear-gradient(90deg,var(--violet),var(--teal)); transition: width 1s linear; }
+.rest-timer .rt-controls { display: flex; gap: 6px; }
+@media (min-width: 769px) { .rest-timer { bottom: 24px; } }
+
 /* Training calendar squares */
 .cal-day.tr-planned { border-color: var(--violet); background: rgba(124,110,247,0.06); }
 .cal-day.tr-done { background: rgba(92,200,122,0.18); border-color: var(--green); }

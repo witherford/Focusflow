@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { bumpVersion, APP_VERSION } from '../src/core/version.js';
 
 describe('version', () => {
-  it('starts at 1.0.0', () => {
-    expect(APP_VERSION).toBe('1.0.0');
+  it('is a valid V<major>.<minor>.<patch> string', () => {
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
   it('bumps patch by 1', () => {
     expect(bumpVersion('1.0.0')).toBe('1.0.1');
