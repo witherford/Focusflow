@@ -66,17 +66,44 @@ function tone(ctx, freq, startAt, dur = 0.35, gain = 0.18, type = 'sine') {
   o.start(startAt); o.stop(startAt + dur + 0.05);
 }
 
+// A softer, more bell-like voice — slow attack, long exponential decay,
+// fundamental + a couple of partials. Optional slight inharmonicity gives
+// the warm, slightly metallic shimmer of a meditation singing bowl.
+function bellPartial(ctx, freq, startAt, gain, decay, type = 'sine') {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, startAt);
+  // Soft attack — ~70 ms ramp so it doesn't click.
+  g.gain.linearRampToValueAtTime(gain, startAt + 0.07);
+  // Long exponential decay — sounds like a struck bowl.
+  g.gain.exponentialRampToValueAtTime(0.0001, startAt + decay);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(startAt); o.stop(startAt + decay + 0.1);
+}
+
+function bell(ctx, baseFreq, startAt, decay = 4.5, baseGain = 0.18) {
+  // Fundamental + octave + fifth + slight inharmonic shimmer for warmth.
+  bellPartial(ctx, baseFreq,         startAt,        baseGain,        decay);
+  bellPartial(ctx, baseFreq * 2,     startAt + 0.005, baseGain * 0.45, decay * 0.7);
+  bellPartial(ctx, baseFreq * 3,     startAt + 0.012, baseGain * 0.18, decay * 0.5);
+  // Slightly detuned upper partial = the airy bowl shimmer
+  bellPartial(ctx, baseFreq * 2.401, startAt + 0.02,  baseGain * 0.10, decay * 0.6);
+}
+
 function scheduleChime(ctx, kind) {
-  const t = ctx.currentTime + 0.02;  // tiny lead so events aren't in the past
+  const t = ctx.currentTime + 0.02;
   if (kind === 'start') {
-    tone(ctx, 660, t,        0.18, 0.15);
-    tone(ctx, 880, t + 0.16, 0.30, 0.18);
+    // Warm, low-pitched bell — single soft strike, long tail (~5s).
+    bell(ctx, 392, t, 5.0, 0.16);     // G4 fundamental
   } else if (kind === 'tick') {
-    tone(ctx, 1000, t, 0.08, 0.10, 'triangle');
-  } else { // 'end'
-    tone(ctx, 880, t,        0.20, 0.18);
-    tone(ctx, 660, t + 0.20, 0.20, 0.18);
-    tone(ctx, 440, t + 0.40, 0.45, 0.20);
+    tone(ctx, 1000, t, 0.08, 0.06, 'triangle');
+  } else if (kind === 'end') {
+    // Two-tone resolve, both soft and overlapping — feels like a bell
+    // settling. ~6 second total tail.
+    bell(ctx, 523, t,         5.5, 0.16);   // C5
+    bell(ctx, 392, t + 0.9,   6.0, 0.14);   // G4 — resolves down
+  } else if (kind === 'bell') {
+    bell(ctx, 440, t, 5.0, 0.18);
   }
 }
 
