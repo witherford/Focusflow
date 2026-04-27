@@ -42,67 +42,46 @@ function renderHabitCard(h, { flat = false } = {}) {
 
   const blockBadge = flat ? `<span class="badge badge-violet">${h.block}</span>` : '';
 
+  // Gestures attach to .habit-tap (the inner zone), NOT the row. The
+  // edit / delete buttons live as siblings of .habit-tap, so pointer events
+  // on a button physically cannot bubble into the gesture handler.
   return `<div class="habit-row${done ? ' done' : ''}" data-habit-id="${h.id}">
-    ${ring}
-    <div class="habit-info">
-      <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}</div>
-      <div class="habit-meta">${meta}</div>
+    <div class="habit-tap">
+      ${ring}
+      <div class="habit-info">
+        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}</div>
+        <div class="habit-meta">${meta}</div>
+      </div>
+      ${blockBadge}
+      ${streakBadge(streak, h.tierBase || DEFAULT_TIERS)}
     </div>
-    ${blockBadge}
-    ${streakBadge(streak, h.tierBase || DEFAULT_TIERS)}
-    <button class="btn-icon" data-habit-action="edit" data-id="${h.id}">✏️</button>
-    <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}">✕</button>
+    <button class="btn-icon" data-habit-action="edit" data-id="${h.id}" aria-label="Edit habit">✏️</button>
+    <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}" aria-label="Delete habit">✕</button>
   </div>`;
 }
 
-// Wire gesture handlers to all .habit-row elements inside a container.
+// Wire gesture handlers to the .habit-tap inner zone of each row. Action
+// buttons (✏️ / 🗑) are siblings of .habit-tap, so pointer events on them
+// never reach the gesture handler — no fancy stopPropagation gymnastics
+// needed.
 function wireGestures(container) {
   if (!container) return;
   container.querySelectorAll('.habit-row').forEach(row => {
     const id = row.dataset.habitId; if (!id) return;
     const h = S.habits.find(x => x.id === id); if (!h) return;
-    attachHabitGestures(row, {
-      onTap: ({ event }) => {
-        if (event.target.closest('[data-habit-action]')) return;
-        handleTap(h);
-      },
-      onDoubleTap: ({ event }) => {
-        if (event.target.closest('[data-habit-action]')) return;
-        handleDoubleTap(h);
-      },
-      onTripleTap: ({ event }) => {
-        if (event.target.closest('[data-habit-action]')) return;
-        handleTripleTap(h);
-      },
-      onLongPress: ({ event }) => {
-        if (event.target.closest('[data-habit-action]')) return;
-        handleLongPress(h);
-      },
+    const tap = row.querySelector('.habit-tap');
+    if (!tap) return;
+    attachHabitGestures(tap, {
+      onTap:        () => handleTap(h),
+      onDoubleTap:  () => handleDoubleTap(h),
+      onTripleTap:  () => handleTripleTap(h),
+      onLongPress:  () => handleLongPress(h),
     });
   });
-  // Belt + braces: also attach pointerdown/up blockers directly to each
-  // action button so events can never reach the row's gesture handler.
-  // Re-runs every render but the buttons are fresh DOM each time so it's safe.
-  container.querySelectorAll('[data-habit-action]').forEach(btn => {
-    const stop = ev => { ev.stopPropagation(); };
-    btn.addEventListener('pointerdown', stop);
-    btn.addEventListener('pointerup', stop);
-    btn.addEventListener('pointermove', stop);
-  });
 
-  // Delegate edit/delete clicks — attach ONCE per container (idempotent).
+  // One delegated click handler on the container for edit/delete buttons.
   if (!container._habitActionWired) {
     container._habitActionWired = true;
-    // Capture-phase guard: stop pointer events for action buttons before they
-    // bubble to the gesture handler on .habit-row. This prevents the long-press
-    // / tap counter from ever firing for an edit / delete press, no matter
-    // what happens after.
-    container.addEventListener('pointerdown', e => {
-      if (e.target.closest('[data-habit-action]')) e.stopPropagation();
-    }, true);
-    container.addEventListener('pointerup', e => {
-      if (e.target.closest('[data-habit-action]')) e.stopPropagation();
-    }, true);
     container.addEventListener('click', e => {
       const btn = e.target.closest('[data-habit-action]'); if (!btn) return;
       e.stopPropagation();

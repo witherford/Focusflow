@@ -1,7 +1,9 @@
 /* Page/feature-specific styles — from focusflow_v10.html lines 199-432 */
 
 /* Habit rows */
-.habit-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 6px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; min-height: 52px; touch-action: manipulation; }
+.habit-row { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 6px; transition: all 0.15s; position: relative; overflow: hidden; min-height: 52px; }
+.habit-tap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 4px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; border-radius: 8px; }
+.habit-tap:active { background: rgba(124,110,247,0.06); }
 .habit-row::after { content: ''; position: absolute; inset: 0; background: var(--violet); opacity: 0; transition: opacity 0.15s; }
 .habit-row:hover { border-color: var(--border2); }
 .habit-row:active::after { opacity: 0.04; }
