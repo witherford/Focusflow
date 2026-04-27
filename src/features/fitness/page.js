@@ -31,6 +31,7 @@ export function renderTraining() {
   ensureFit();
   renderActiveRoutineCard();
   renderRoutinePicker();
+  renderScheduledEvents();
   renderTrainingSchedule();
   renderBodyMeasurements();
   renderWeightProgression();
@@ -42,7 +43,7 @@ function renderActiveRoutineCard() {
   const el = document.getElementById('train-active'); if (!el) return;
   const r = activeRoutine();
   if (!r) {
-    el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="es-icon">🏋️</div><div class="es-title">No routine yet</div><div class="es-sub">Pick one below or build your own</div></div>';
+    el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="es-icon">🏋️</div><div class="es-title">No routine yet</div><div class="es-sub">Pick one in the Routines tab or build your own</div></div>';
     return;
   }
   const planned = dayLabelForDate(r, new Date());
@@ -56,25 +57,81 @@ function renderActiveRoutineCard() {
         ${lastDone ? ` · last: ${lastDone.date} (${lastDone.dayLabel})` : ''}
       </div>
     </div>
-    <button class="btn btn-primary" onclick="openWorkoutLogger()" ${planned === 'rest' ? '' : ''}>▶ Start workout</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="openWorkoutLogger()">▶ Start workout</button>
+      <button class="btn btn-sm" onclick="openRoutineEditor('${r.id}')">✏️ Edit</button>
+      <button class="btn btn-sm" onclick="deactivateRoutinePrompt()">⏹ Deactivate</button>
+    </div>
   </div>`;
 }
 
 function renderRoutinePicker() {
   const el = document.getElementById('train-routines'); if (!el) return;
   const t = S.training || {};
-  const allRoutines = [...ROUTINE_LIBRARY, ...(t.customRoutines || [])];
-  el.innerHTML = allRoutines.map(r => {
-    const active = r.id === t.activeRoutineId;
-    return `<button class="routine-card${active ? ' active' : ''}" onclick="activateRoutine('${r.id}')">
-      <div class="rc-info">
-        <div class="rc-name">${r.name}${active ? ' <span style="color:var(--teal);font-size:11px">· active</span>' : ''}</div>
-        <div class="rc-desc">${r.desc}</div>
-        <div class="rc-meta">${r.schedule.filter(d => d !== 'rest').length} days/week · ${r.progression}</div>
-      </div>
-      <span class="rc-cta">${active ? '✓' : '→'}</span>
-    </button>`;
-  }).join('');
+  const builtIn = ROUTINE_LIBRARY;
+  const custom = t.customRoutines || [];
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn btn-sm btn-primary" onclick="createNewRoutine()">+ New routine</button>
+    </div>
+    ${custom.length ? `<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:8px 0 4px">Your routines</div>` : ''}
+    ${custom.map(r => routineCardHTML(r, t.activeRoutineId, true)).join('')}
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 4px">Built-in routines</div>
+    ${builtIn.map(r => routineCardHTML(r, t.activeRoutineId, false)).join('')}
+  `;
+}
+
+function routineCardHTML(r, activeId, isCustom) {
+  const active = r.id === activeId;
+  const dayCount = (r.schedule || []).filter(d => d && d !== 'rest').length;
+  return `<div class="routine-card${active ? ' active' : ''}">
+    <div class="rc-info" onclick="activateRoutine('${r.id}')" style="cursor:pointer">
+      <div class="rc-name">${r.name}${active ? ' <span style="color:var(--teal);font-size:11px">· active</span>' : ''}</div>
+      <div class="rc-desc">${r.desc || ''}</div>
+      <div class="rc-meta">${dayCount} days/week · ${r.progression || 'manual'}</div>
+    </div>
+    <div style="display:flex;gap:4px;flex-direction:column">
+      <button class="btn-icon" title="Edit" onclick="event.stopPropagation();openRoutineEditor('${r.id}')">✏️</button>
+      ${isCustom ? `<button class="btn-icon danger" title="Delete" onclick="event.stopPropagation();deleteRoutine('${r.id}')">🗑</button>` : ''}
+    </div>
+  </div>`;
+}
+
+export function deactivateRoutinePrompt() {
+  if (!S.training?.activeRoutineId) return;
+  if (!confirm('Are you sure you want to deactivate the active routine? Past sessions are kept; just no plan will show on the schedule until you reactivate.')) return;
+  S.training.activeRoutineId = null;
+  save();
+  renderTraining();
+  window.toast?.('Routine deactivated');
+}
+
+// ── Scheduled training events (formerly Profile → Training Routines) ────────
+function renderScheduledEvents() {
+  const el = document.getElementById('train-scheduled'); if (!el) return;
+  const routines = S.profile?.trainRoutines || [];
+  const todayShort = new Date().toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Scheduled training events</div>
+      <button class="btn btn-sm btn-primary" onclick="openAddRoutine()">+ Add</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Time-bound entries (e.g. "Yoga 7-8am Mon/Wed/Fri") — show on the dashboard schedule strip too.</div>
+    ${routines.length ? routines.map(r => {
+      const todayMatch = (r.days || []).includes(todayShort);
+      return `<div class="routine-card${todayMatch ? ' active' : ''}" style="margin-bottom:6px">
+        <div class="rc-info">
+          <div class="rc-name">${r.icon || '🏋️'} ${r.name}${todayMatch ? ' <span style="color:var(--teal);font-size:11px">· today</span>' : ''}</div>
+          <div class="rc-meta">${(r.start || '?')}–${(r.end || '?')} · ${(r.days || []).join(', ') || 'no days'}</div>
+          ${r.notes ? `<div class="rc-desc">${r.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:4px;flex-direction:column">
+          <button class="btn-icon" onclick="openEditRoutine('${r.id}')">✏️</button>
+          <button class="btn-icon danger" onclick="delRoutine('${r.id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('') : '<div class="caption" style="padding:6px 0">No scheduled events</div>'}
+  `;
 }
 
 // ── Modality CRUD (manual sessions for non-routine activities) ──────────────
@@ -334,4 +391,5 @@ if (typeof window !== 'undefined') {
   window.saveAllMeasurements = saveAllMeasurements;
   window.renderBodyMeasurements = renderBodyMeasurements;
   window.renderWeightProgression = renderWeightProgression;
+  window.deactivateRoutinePrompt = deactivateRoutinePrompt;
 }

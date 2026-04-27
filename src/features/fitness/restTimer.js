@@ -15,9 +15,22 @@ export function defaultRestSeconds(exercise) {
   return ACCESSORY_REST;
 }
 
-function ensureNode() {
-  if (document.getElementById('rest-timer')) return;
-  const html = `<div id="rest-timer" class="rest-timer" style="display:none">
+function getMountTarget() {
+  // Prefer the inline slot inside the workout modal if it exists; otherwise
+  // fall back to a floating bottom card.
+  return document.getElementById('wo-rest') || document.getElementById('rest-timer-floating-mount');
+}
+
+function ensureFloatingMount() {
+  if (document.getElementById('rest-timer-floating-mount')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'rest-timer-floating-mount';
+  wrap.className = 'rest-timer-floating';
+  document.body.appendChild(wrap);
+}
+
+function html() {
+  return `<div class="rest-timer">
     <div class="rt-inner">
       <div class="rt-label" id="rt-label">Rest</div>
       <div class="rt-time" id="rt-time">00:00</div>
@@ -29,18 +42,32 @@ function ensureNode() {
       </div>
     </div>
   </div>`;
-  const wrap = document.createElement('div'); wrap.innerHTML = html;
-  document.body.appendChild(wrap.firstChild);
+}
+
+function ensureNode() {
+  let target = document.getElementById('wo-rest');
+  if (!target) { ensureFloatingMount(); target = document.getElementById('rest-timer-floating-mount'); }
+  if (!target.querySelector('.rest-timer')) target.innerHTML = html();
 }
 
 function render() {
-  const el = document.getElementById('rest-timer'); if (!el) return;
-  if (!_state.running) { el.style.display = 'none'; return; }
-  el.style.display = '';
+  ensureNode();
+  // Inline slot lives inside the workout modal — show/hide via parent's existence.
+  const inline = document.getElementById('wo-rest');
+  const floating = document.getElementById('rest-timer-floating-mount');
+  if (!_state.running) {
+    if (inline) inline.innerHTML = '';
+    if (floating) floating.style.display = 'none';
+    return;
+  }
+  if (inline && inline.children.length === 0) inline.innerHTML = html();
+  if (!inline && floating) floating.style.display = '';
   const m = Math.floor(Math.max(0, _state.secsLeft) / 60);
   const s = Math.max(0, _state.secsLeft) % 60;
-  document.getElementById('rt-time').textContent = `${m}:${String(s).padStart(2, '0')}`;
-  document.getElementById('rt-label').textContent = `Rest · ${_state.exercise || 'set'}`;
+  const t = document.getElementById('rt-time');
+  if (t) t.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  const lbl = document.getElementById('rt-label');
+  if (lbl) lbl.textContent = `Rest · ${_state.exercise || 'set'}`;
   const pct = _state.totalSec ? Math.max(0, _state.secsLeft / _state.totalSec) * 100 : 0;
   const fill = document.getElementById('rt-bar-fill');
   if (fill) fill.style.width = pct + '%';

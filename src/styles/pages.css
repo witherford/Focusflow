@@ -302,15 +302,42 @@
 .wo-set:active { transform: scale(0.94); }
 .wo-set-add { color: var(--text3); border-style: dashed; }
 
-/* Rest timer — fixed bottom-center, above mob-nav */
-.rest-timer { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 110; background: var(--bg2); border: 1px solid var(--violet); border-radius: var(--r); box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 12px 16px; min-width: 240px; max-width: 92%; }
+/* Rest timer — inline slot inside the workout modal, OR a floating card */
+.rest-timer { background: var(--bg2); border: 1px solid var(--violet); border-radius: var(--r); padding: 12px 16px; }
 .rest-timer .rt-inner { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .rest-timer .rt-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
 .rest-timer .rt-time { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 600; color: var(--text); }
 .rest-timer .rt-bar { width: 100%; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
 .rest-timer .rt-bar-fill { height: 100%; background: linear-gradient(90deg,var(--violet),var(--teal)); transition: width 1s linear; }
 .rest-timer .rt-controls { display: flex; gap: 6px; }
-@media (min-width: 769px) { .rest-timer { bottom: 24px; } }
+.wo-rest-inline { margin-bottom: 10px; }
+.wo-rest-inline .rest-timer { box-shadow: 0 0 0 2px rgba(124,110,247,0.2); }
+.rest-timer-floating { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 110; min-width: 240px; max-width: 92%; box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+@media (min-width: 769px) { .rest-timer-floating { bottom: 24px; } }
+
+/* Workout modal sections + fullscreen */
+.wo-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; }
+.wo-section-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.wo-modal { transition: max-width 0.18s ease, max-height 0.18s ease; }
+.wo-modal.wo-fullscreen { max-width: 100vw !important; max-height: 100vh !important; width: 100vw; height: 100vh; border-radius: 0 !important; padding: 16px; margin: 0 !important; }
+.wo-overlay-fullscreen { padding: 0 !important; align-items: stretch !important; }
+.wo-modal.wo-fullscreen #wo-exercises { max-height: none; }
+
+/* Cardio module styling */
+.cardio-mod { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px; }
+.cardio-mod .cm-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.cardio-mod .cm-time { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 600; color: var(--text); text-align: center; }
+.cardio-mod .cm-phase { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; margin-bottom: 6px; }
+.cardio-mod .cm-controls { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+.cardio-mod .cm-meta { font-size: 11px; color: var(--text3); text-align: center; margin-top: 4px; min-height: 14px; }
+
+/* Routine editor */
+.day-editor { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; }
+.sec-editor { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; margin-bottom: 6px; }
+.sec-editor.sec-cardio { border-left: 3px solid var(--teal); }
+.sec-editor.sec-lift { border-left: 3px solid var(--violet); }
+.sec-editor .ex-list { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
+.sec-editor .ex-row { display: flex; align-items: center; gap: 4px; }
 
 /* Training calendar squares */
 .cal-day.tr-planned { border-color: var(--violet); background: rgba(124,110,247,0.06); }

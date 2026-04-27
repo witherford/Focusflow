@@ -107,12 +107,12 @@ export function saveRoutine() {
   if (!S.profile.trainRoutines) S.profile.trainRoutines = [];
   if (editId) { const r = S.profile.trainRoutines.find(x => x.id === editId); if (r) Object.assign(r, data); }
   else S.profile.trainRoutines.push({ id: uid(), ...data });
-  save(); window.closeModal('m-routine'); renderRoutinesList(); window.renderSchedule?.();
+  save(); window.closeModal('m-routine'); renderRoutinesList(); window.renderSchedule?.(); window.renderTraining?.();
 }
 
 export function delRoutine(id) {
   S.profile.trainRoutines = (S.profile.trainRoutines || []).filter(r => r.id !== id);
-  save(); renderRoutinesList(); window.renderSchedule?.();
+  save(); renderRoutinesList(); window.renderSchedule?.(); window.renderTraining?.();
 }
 
 export function initRoutineDays() {

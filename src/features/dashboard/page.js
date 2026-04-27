@@ -103,9 +103,9 @@ export function dashUpNextClick(kind, id) {
 
 export function renderQuickStart() {
   const el = document.getElementById('dash-quickstart'); if (!el) return;
-  const presets = (S.deepwork?.presets || []).slice(0, 4);
+  const presets = (S.deepwork?.presets || []);
   if (!presets.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">⏱ Quick start focus</div><div style="font-size:11px;color:var(--text3)">tap to launch</div></div>
+  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">⏱ Quick start focus</div><div style="font-size:11px;color:var(--text3)">tap to launch · ${presets.length}</div></div>
     <div class="qs-row">${presets.map(p => `<button class="qs-chip" onclick="dashStartPreset('${p.id}')"><div class="qs-icon">${p.icon || '⏱'}</div><div class="qs-mins">${p.mins}m</div><div class="qs-label">${p.label}</div></button>`).join('')}</div>
   </div>`;
 }

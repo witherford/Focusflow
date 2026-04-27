@@ -96,6 +96,22 @@ export function getRoutine(id, customRoutines = []) {
   return ROUTINE_LIBRARY.find(r => r.id === id) || customRoutines.find(r => r.id === id) || null;
 }
 
+// Backwards-compatible reader: legacy `days[label]` was a flat array of
+// exercise specs. New shape is `days[label]: { sections: [...] }` where
+// each section has { id, name, type ('lift'|'cardio'), exercises, … }.
+export function dayToSections(day) {
+  if (!day) return [];
+  if (Array.isArray(day)) {
+    return [{ id: '_main', name: 'Main', type: 'lift', exercises: day }];
+  }
+  if (Array.isArray(day.sections)) return day.sections;
+  return [];
+}
+
+export function flattenExercisesFromDay(day) {
+  return dayToSections(day).flatMap(s => s.exercises || []);
+}
+
 // Returns the day-label scheduled for a given Date, or 'rest'.
 export function dayLabelForDate(routine, date) {
   if (!routine || !routine.schedule) return 'rest';

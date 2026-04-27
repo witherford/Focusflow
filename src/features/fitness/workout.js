@@ -3,9 +3,10 @@
 // S.training.history and S.fitness.sessions.
 import { S, today, uid, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
-import { ROUTINE_LIBRARY, getRoutine, dayLabelForDate, lastSessionOf } from './routines.js';
+import { ROUTINE_LIBRARY, getRoutine, dayLabelForDate, lastSessionOf, dayToSections } from './routines.js';
 import { suggestNext, estimate1RM, bestSet1RM, platesString, perLiftRate, COMPOUND_LIFTS, getStartingWeight, setStartingWeight } from './progression.js';
 import { startRest, stopRest } from './restTimer.js';
+import { renderStopwatch, renderInterval, swGetResult, swClear, ivGetResult, ivClear } from './cardio.js';
 
 let _state = { routineId: null, dayLabel: null, exercises: [] };
 
@@ -134,22 +135,31 @@ export function openWorkoutLogger(forcedDayLabel) {
   if (dl === 'rest') {
     if (!confirm('Today is a rest day in this routine. Log a workout anyway?')) return;
   }
-  const dayPlan = r.days?.[dl] || [];
+  const day = r.days?.[dl];
+  const sections = dayToSections(day);
   const last = lastSessionOf(r.id, dl, S.training.history);
   _state = {
     routineId: r.id,
     dayLabel: dl === 'rest' ? Object.keys(r.days || {})[0] || 'A' : dl,
-    exercises: dayPlan.map(ex => {
-      const sug = suggestNext(ex, r, last);
-      return {
-        exercise: ex.exercise,
-        targetSets: ex.sets,
-        targetReps: ex.reps,
-        weight: sug.weight,
-        suggestion: sug,
-        sets: Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: sug.weight, done: false })),
-      };
-    }),
+    fullscreen: false,
+    sections: sections.map(sec => ({
+      id: sec.id || uid(),
+      name: sec.name || 'Section',
+      type: sec.type || 'lift',
+      cardioType: sec.cardioType,
+      exercises: (sec.exercises || []).map(ex => {
+        if (sec.type === 'cardio') {
+          return { exercise: ex.exercise || ex.name || 'Cardio', duration: ex.duration || 0, durationLogged: 0, type: 'cardio' };
+        }
+        const sug = suggestNext(ex, r, last);
+        return {
+          exercise: ex.exercise, type: 'lift',
+          targetSets: ex.sets, targetReps: ex.reps,
+          weight: sug.weight, suggestion: sug,
+          sets: Array.from({ length: ex.sets }, () => ({ reps: ex.reps, weight: sug.weight, done: false })),
+        };
+      }),
+    })),
   };
   ensureLoggerModal();
   renderLoggerModal();
@@ -158,14 +168,19 @@ export function openWorkoutLogger(forcedDayLabel) {
 
 function ensureLoggerModal() {
   if (document.getElementById('m-workout')) return;
-  const html = `<div class="modal-overlay" id="m-workout" style="display:none"><div class="modal" style="max-width:540px">
+  const html = `<div class="modal-overlay" id="m-workout" style="display:none"><div class="modal wo-modal" style="max-width:600px;max-height:92vh;display:flex;flex-direction:column">
     <div class="modal-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px">
       <div class="modal-title" id="wo-title" style="margin:0">Workout</div>
-      <span style="font-size:11px;color:var(--text3)" id="wo-meta"></span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)" id="wo-meta"></span>
+        <button class="btn-icon" title="Toggle fullscreen" onclick="toggleWorkoutFullscreen()">⛶</button>
+        <button class="btn-icon" onclick="closeModal('m-workout')">✕</button>
+      </div>
     </div>
-    <div id="wo-exercises" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto"></div>
-    <div style="display:flex;gap:8px;margin-top:14px">
+    <div id="wo-rest" class="wo-rest-inline"></div>
+    <div id="wo-exercises" style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-shrink:0">
       <button class="btn btn-primary" style="flex:1" onclick="saveWorkout()">💾 Save workout</button>
       <button class="btn" onclick="closeModal('m-workout')">Cancel</button>
     </div>
@@ -174,80 +189,138 @@ function ensureLoggerModal() {
   document.body.appendChild(wrap.firstChild);
 }
 
+export function toggleWorkoutFullscreen() {
+  _state.fullscreen = !_state.fullscreen;
+  const inner = document.querySelector('#m-workout .wo-modal');
+  if (inner) inner.classList.toggle('wo-fullscreen', _state.fullscreen);
+  const overlay = document.getElementById('m-workout');
+  if (overlay) overlay.classList.toggle('wo-overlay-fullscreen', _state.fullscreen);
+}
+
 function renderLoggerModal() {
   const r = activeRoutine();
   document.getElementById('wo-title').textContent = `${r?.name || 'Workout'} · ${_state.dayLabel}`;
   document.getElementById('wo-meta').textContent = today();
   const wrap = document.getElementById('wo-exercises');
-  wrap.innerHTML = _state.exercises.map((ex, i) => {
-    const sug = ex.suggestion || {};
-    const e1rm = estimate1RM(ex.weight, ex.targetReps);
-    const plates = platesString(ex.weight);
-    const hintColor = sug.deloaded ? 'var(--rose)' : sug.reason === 'progress' ? 'var(--green)' : 'var(--text3)';
-    const hint = sug.reason === 'progress' ? `↑ +${(ex.weight - (sug.weight - perDelta(ex, r))).toFixed?.(1) || ''} new top set`
-              : sug.deloaded ? `⚠ deload — work back up`
-              : sug.reason === 'starting' ? 'starting weight'
-              : sug.reason && sug.reason.startsWith('hold') ? `↻ ${sug.reason}`
-              : '';
-    return `
-    <div class="wo-exercise">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-weight:600">${ex.exercise}</span>
-        <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${ex.targetSets}×${ex.targetReps}</span>
-        <span style="flex:1"></span>
-        <input type="number" step="0.5" inputmode="decimal" value="${ex.weight}" oninput="setExerciseWeight(${i}, this.value)" style="width:80px;font-family:'DM Mono',monospace" placeholder="kg">
-        <span style="font-size:11px;color:var(--text3)">kg</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;flex-wrap:wrap">
-        ${hint ? `<span style="color:${hintColor}">${hint}</span>` : ''}
-        <span style="color:var(--text3)">e1RM ≈ <strong style="color:var(--text2)">${e1rm || '—'}</strong> kg</span>
-        <span style="color:var(--text3);cursor:pointer;text-decoration:underline" onclick="showPlatesFor(${i})" title="Plate calculator">🪙 ${plates}</span>
-      </div>
-      <div class="wo-sets" style="display:flex;flex-wrap:wrap;gap:6px">
-        ${ex.sets.map((s, j) => `
-          <button class="wo-set ${s.done ? 'done' : ''}" onclick="toggleWorkoutSet(${i},${j})">
-            <span class="wo-set-reps">${s.reps}</span>
-          </button>
-        `).join('')}
-        <button class="wo-set wo-set-add" onclick="addWorkoutSet(${i})">+</button>
-      </div>
-    </div>
-  `;
-  }).join('') || '<div class="caption" style="text-align:center;padding:14px">No exercises planned for this day. Pick a routine to populate the workout.</div>';
+  if (!_state.sections.length) {
+    wrap.innerHTML = '<div class="caption" style="text-align:center;padding:14px">No sections planned for this day. Edit the routine to add exercises.</div>';
+    return;
+  }
+  wrap.innerHTML = _state.sections.map((sec, secIdx) => {
+    const items = sec.exercises.map((ex, exIdx) => {
+      if (ex.type === 'cardio') return renderCardioExercise(secIdx, exIdx, ex, sec);
+      return renderLiftExercise(secIdx, exIdx, ex, r);
+    }).join('');
+    return `<div class="wo-section">
+      <div class="wo-section-hd"><span style="font-weight:700;font-size:13px">${sec.type === 'cardio' ? '🏃' : '🏋️'} ${sec.name}</span></div>
+      ${items || '<div class="caption">No exercises in this section</div>'}
+    </div>`;
+  }).join('');
+
+  // Mount cardio modules into their containers post-render.
+  _state.sections.forEach((sec, secIdx) => {
+    if (sec.type !== 'cardio') return;
+    sec.exercises.forEach((ex, exIdx) => {
+      const key = `wo-cardio-${secIdx}-${exIdx}`;
+      const target = document.getElementById(key);
+      if (!target) return;
+      if (sec.cardioType === 'interval') renderInterval(target, key);
+      else renderStopwatch(target, key);
+    });
+  });
 }
+
+function renderLiftExercise(secIdx, exIdx, ex, r) {
+  const i = sectionExerciseIndex(secIdx, exIdx);
+  const sug = ex.suggestion || {};
+  const e1rm = estimate1RM(ex.weight, ex.targetReps);
+  const plates = platesString(ex.weight);
+  const hintColor = sug.deloaded ? 'var(--rose)' : sug.reason === 'progress' ? 'var(--green)' : 'var(--text3)';
+  const hint = sug.reason === 'progress' ? `↑ +${(ex.weight - (sug.weight - perDelta(ex, r))).toFixed?.(1) || ''} new top set`
+            : sug.deloaded ? '⚠ deload — work back up'
+            : sug.reason === 'starting' ? 'starting weight'
+            : sug.reason && sug.reason.startsWith('hold') ? `↻ ${sug.reason}`
+            : '';
+  return `<div class="wo-exercise">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-weight:600">${ex.exercise}</span>
+      <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${ex.targetSets}×${ex.targetReps}</span>
+      <span style="flex:1"></span>
+      <input type="number" step="0.5" inputmode="decimal" value="${ex.weight}" oninput="setExerciseWeight(${secIdx},${exIdx}, this.value)" style="width:80px;font-family:'DM Mono',monospace" placeholder="kg">
+      <span style="font-size:11px;color:var(--text3)">kg</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px;flex-wrap:wrap">
+      ${hint ? `<span style="color:${hintColor}">${hint}</span>` : ''}
+      <span style="color:var(--text3)">e1RM ≈ <strong style="color:var(--text2)">${e1rm || '—'}</strong> kg</span>
+      <span style="color:var(--text3);cursor:pointer;text-decoration:underline" onclick="showPlatesFor(${secIdx},${exIdx})" title="Plate calculator">🪙 ${plates}</span>
+    </div>
+    <div class="wo-sets" style="display:flex;flex-wrap:wrap;gap:6px">
+      ${ex.sets.map((s, j) => `
+        <button class="wo-set ${s.done ? 'done' : ''}" onclick="toggleWorkoutSet(${secIdx},${exIdx},${j})">
+          <span class="wo-set-reps">${s.reps}</span>
+        </button>
+      `).join('')}
+      <button class="wo-set wo-set-add" onclick="addWorkoutSet(${secIdx},${exIdx})">+</button>
+    </div>
+  </div>`;
+}
+
+function renderCardioExercise(secIdx, exIdx, ex, sec) {
+  const key = `wo-cardio-${secIdx}-${exIdx}`;
+  return `<div class="wo-exercise">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-weight:600">${ex.exercise || 'Cardio'}</span>
+      ${ex.duration ? `<span style="font-size:11px;color:var(--text3)">${ex.duration} min target</span>` : ''}
+      <span style="flex:1"></span>
+      <span style="font-size:10px;color:var(--text3);text-transform:uppercase">${sec.cardioType || 'stopwatch'}</span>
+    </div>
+    <div id="${key}"></div>
+  </div>`;
+}
+
+function sectionExerciseIndex(secIdx, exIdx) { return `${secIdx}-${exIdx}`; }
 
 function perDelta(ex, r) { return perLiftRate(ex.exercise, r); }
 
-export function showPlatesFor(i) {
-  const ex = _state.exercises[i]; if (!ex) return;
+export function showPlatesFor(secIdx, exIdx) {
+  const sec = _state.sections[secIdx]; if (!sec) return;
+  const ex = sec.exercises[exIdx]; if (!ex) return;
   alert(`${ex.exercise} @ ${ex.weight} kg\n${platesString(ex.weight)}`);
 }
 
-export function setExerciseWeight(idx, val) {
-  const ex = _state.exercises[idx]; if (!ex) return;
+export function setExerciseWeight(secIdx, exIdx, val) {
+  const ex = _state.sections?.[secIdx]?.exercises?.[exIdx]; if (!ex) return;
   const v = parseFloat(val) || 0;
   ex.weight = v;
-  // Also update each set's weight (user can override per-set later via long-press if we add it).
-  ex.sets.forEach(s => { if (!s.done) s.weight = v; });
+  ex.sets?.forEach(s => { if (!s.done) s.weight = v; });
 }
 
-export function toggleWorkoutSet(i, j) {
-  const ex = _state.exercises[i]; if (!ex) return;
+export function toggleWorkoutSet(secIdx, exIdx, j) {
+  const ex = _state.sections?.[secIdx]?.exercises?.[exIdx]; if (!ex || ex.type !== 'lift') return;
   const s = ex.sets[j]; if (!s) return;
   s.done = !s.done;
   if (s.done) {
     s.weight = ex.weight; s.reps = s.reps || ex.targetReps; haptic('light');
-    // Start a rest timer between sets unless this was the last set of the workout.
-    const isLastSet = i === _state.exercises.length - 1 && j === ex.sets.length - 1;
-    if (!isLastSet) startRest(ex.exercise);
+    // Start a rest timer between sets — except for the last set of the last lift section.
+    const lastLiftSec = lastLiftSectionIndex();
+    const sec = _state.sections[secIdx];
+    const isLastEx = exIdx === sec.exercises.length - 1;
+    const isLastSet = j === ex.sets.length - 1;
+    const isLastSetOfWorkout = secIdx === lastLiftSec && isLastEx && isLastSet;
+    if (!isLastSetOfWorkout) startRest(ex.exercise);
   } else {
     stopRest(false);
   }
   renderLoggerModal();
 }
 
-export function addWorkoutSet(i) {
-  const ex = _state.exercises[i]; if (!ex) return;
+function lastLiftSectionIndex() {
+  for (let i = _state.sections.length - 1; i >= 0; i--) if (_state.sections[i].type === 'lift') return i;
+  return -1;
+}
+
+export function addWorkoutSet(secIdx, exIdx) {
+  const ex = _state.sections?.[secIdx]?.exercises?.[exIdx]; if (!ex || ex.type !== 'lift') return;
   ex.sets.push({ reps: ex.targetReps, weight: ex.weight, done: false });
   renderLoggerModal();
 }
@@ -255,28 +328,39 @@ export function addWorkoutSet(i) {
 export function saveWorkout() {
   ensureTraining();
   const r = activeRoutine(); if (!r) return;
-  const completed = _state.exercises.filter(ex => ex.sets.some(s => s.done));
-  if (!completed.length) { window.toast?.('Mark at least one set as done'); return; }
+  // Flatten sections → list of exercises that had any work logged.
+  const liftExercises = [];
+  const cardioResults = [];
+  _state.sections.forEach((sec, secIdx) => {
+    sec.exercises.forEach((ex, exIdx) => {
+      if (ex.type === 'cardio') {
+        const key = `wo-cardio-${secIdx}-${exIdx}`;
+        const sw = swGetResult(key); const iv = ivGetResult(key);
+        const result = sec.cardioType === 'interval' ? iv : (sw ? { totalMs: sw } : null);
+        if (result) {
+          cardioResults.push({ exercise: ex.exercise, sectionName: sec.name, cardioType: sec.cardioType, ...result });
+          swClear(key); ivClear(key);
+        }
+      } else {
+        const completedSets = ex.sets.filter(s => s.done);
+        if (completedSets.length) liftExercises.push({ exercise: ex.exercise, weight: ex.weight, sets: completedSets.map(s => ({ reps: s.reps, weight: s.weight })) });
+      }
+    });
+  });
+  if (!liftExercises.length && !cardioResults.length) { window.toast?.('Log at least one set or cardio result'); return; }
+
   const sessionEntry = {
-    id: uid(),
-    routineId: r.id,
-    dayLabel: _state.dayLabel,
-    date: today(),
-    ts: Date.now(),
-    exercises: _state.exercises.map(ex => ({
-      exercise: ex.exercise,
-      weight: ex.weight,
-      sets: ex.sets.filter(s => s.done).map(s => ({ reps: s.reps, weight: s.weight })),
-    })),
+    id: uid(), routineId: r.id, dayLabel: _state.dayLabel, date: today(), ts: Date.now(),
+    exercises: liftExercises, cardio: cardioResults,
   };
   S.training.history.push(sessionEntry);
 
   // Also push a summary to S.fitness.sessions so the existing log + Insights pick it up.
   if (!S.fitness) S.fitness = { modalities: [], sessions: [], prs: [] };
-  const totalSets = sessionEntry.exercises.reduce((a, e) => a + e.sets.length, 0);
-  const totalReps = sessionEntry.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps || 0), 0), 0);
-  const heaviest = sessionEntry.exercises.reduce((mx, e) => Math.max(mx, e.weight || 0), 0);
-  const volume = sessionEntry.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps || 0) * (s.weight || 0), 0), 0);
+  const totalSets = liftExercises.reduce((a, e) => a + e.sets.length, 0);
+  const totalReps = liftExercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps || 0), 0), 0);
+  const heaviest = liftExercises.reduce((mx, e) => Math.max(mx, e.weight || 0), 0);
+  const volume = liftExercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps || 0) * (s.weight || 0), 0), 0);
   S.fitness.sessions.push({
     id: uid(),
     modId: '_training_' + r.id,
@@ -293,7 +377,7 @@ export function saveWorkout() {
 
   // PR per exercise (heaviest weight at any rep count)
   if (!Array.isArray(S.fitness.prs)) S.fitness.prs = [];
-  for (const e of sessionEntry.exercises) {
+  for (const e of liftExercises) {
     const topSet = (e.sets || []).reduce((mx, s) => ((s.weight || 0) > (mx?.weight || 0) ? s : mx), null);
     if (!topSet) continue;
     const prior = S.fitness.prs.filter(p => p.exercise === e.exercise && p.reps === topSet.reps);
@@ -339,4 +423,5 @@ if (typeof window !== 'undefined') {
   window.showPlatesFor = showPlatesFor;
   window.openStartingWeightsWizard = openStartingWeightsWizard;
   window.saveStartingWeights = saveStartingWeights;
+  window.toggleWorkoutFullscreen = toggleWorkoutFullscreen;
 }

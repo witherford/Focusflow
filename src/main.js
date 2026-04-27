@@ -67,6 +67,8 @@ import { renderShop } from './features/shopping/page.js';
 import { renderTraining as renderFitness } from './features/fitness/page.js';
 import './features/fitness/workout.js';
 import './features/fitness/calendar.js';
+import './features/fitness/routineEdit.js';
+import './features/fitness/cardio.js';
 import './ui/fullscreenTimer.js';
 import { renderJournal } from './features/journal/page.js';
 import { renderProfile, attachAutoSave, applyAIVis, initRoutineDays } from './features/profile/page.js';
