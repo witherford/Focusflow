@@ -39,10 +39,11 @@ export function renderProfile() {
 export function togglePH(type, h) {
   const arr = type === 'pos' ? (S.profile.posHabits || (S.profile.posHabits = [])) : (S.profile.negHabits || (S.profile.negHabits = []));
   const idx = arr.indexOf(h);
-  const nowSelected = idx === -1;
   if (idx > -1) arr.splice(idx, 1); else arr.push(h);
-  if (type === 'pos') syncPositiveHabit(h, nowSelected);
-  saveProfile(true); renderProfile(); window.renderBadHabits?.(); window.renderHabitsToday?.(); window.renderHabitsAll?.();
+  // Selecting a positive habit in the profile no longer auto-creates one in
+  // your habit list — that caused habits to appear without your input on
+  // every reload. Add habits explicitly via the Habits page or Quick Capture.
+  saveProfile(true); renderProfile(); window.renderBadHabits?.();
 }
 
 export function saveProfile(silent) {
