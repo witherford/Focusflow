@@ -30,14 +30,50 @@ export function saveShop() { const name = document.getElementById('shop-name').v
 
 export async function genShoppingList() {
   const btn = document.getElementById('shop-gen-btn'), status = document.getElementById('shop-status');
-  btn.disabled = true; btn.textContent = '⏳…'; status.textContent = 'Generating…';
-  const p = S.profile;
-  const prompt = `Create a weekly healthy shopping list. Return ONLY a raw JSON array, no markdown.\nProfile: Weight ${p.weight || 'unknown'}kg, Diet: ${p.diet}, Meals/day: ${p.meals}, Allergies: ${p.allergies || 'none'}, Goals: ${p.goals || 'general health'}\nFormat: [{"name":"","qty":"","category":"Protein|Vegetables|Fruit|Grains & Carbs|Dairy & Eggs|Healthy Fats|Snacks|Drinks|Supplements|Other","supermarket":""}]\nCreate 30-35 specific items.`;
+  if (!btn || !status) return;
+  btn.disabled = true; btn.textContent = '⏳ Generating…'; status.textContent = 'Talking to AI…';
+  const p = S.profile || {};
+  const prompt = [
+    'Create a weekly healthy shopping list as a JSON ARRAY (not an object).',
+    'Return ONLY the raw JSON array — no prose, no markdown fences.',
+    `Profile: Weight ${p.weight || 'unknown'}kg, Diet: ${p.diet || 'balanced'}, Meals per day: ${p.meals || 3}, Allergies/avoid: ${p.allergies || 'none'}, Long-term goals: ${p.goals || 'general health'}.`,
+    'Each item must be an object: {"name": "...", "qty": "...", "category": "...", "supermarket": ""}.',
+    'category MUST be one of: Protein, Vegetables, Fruit, Grains & Carbs, Dairy & Eggs, Healthy Fats, Snacks, Drinks, Supplements, Other.',
+    'Generate 30 items. Be specific (e.g. "chicken thighs 1kg" not "meat").',
+    'Example: [{"name":"chicken thighs","qty":"1kg","category":"Protein","supermarket":""}, ...]',
+  ].join('\n');
+  let raw = '';
   try {
-    const raw = await callAI(prompt); const items = extractJSON(raw, true);
-    S.shopping = [...S.shopping, ...items.map(i => ({ id: uid(), name: i.name, qty: i.qty || '', price: '', category: i.category || 'Other', supermarket: i.supermarket || '', checked: false }))];
-    save(); renderShop(); btn.disabled = false; btn.textContent = '🤖 Regenerate'; status.textContent = `Added ${items.length} items ✓`; window.toast(`${items.length} items added!`);
-  } catch (e) { btn.disabled = false; btn.textContent = '🤖 Generate List'; status.textContent = 'Failed — try again'; }
+    raw = await callAI(prompt, null, { jsonMode: true });
+    let items = extractJSON(raw, true);
+    if (!Array.isArray(items)) {
+      // Sometimes wrapped: { items: [...] } or { list: [...] }
+      if (items && Array.isArray(items.items)) items = items.items;
+      else if (items && Array.isArray(items.list)) items = items.list;
+      else throw new Error('AI returned non-array');
+    }
+    items = items.filter(i => i && typeof i === 'object' && i.name);
+    if (!items.length) throw new Error('AI returned no valid items');
+    S.shopping = [...S.shopping, ...items.map(i => ({
+      id: uid(),
+      name: String(i.name).trim(),
+      qty: String(i.qty || '').trim(),
+      price: '',
+      category: String(i.category || 'Other').trim(),
+      supermarket: String(i.supermarket || '').trim(),
+      checked: false,
+    }))];
+    save(); renderShop();
+    btn.disabled = false; btn.textContent = '🤖 Regenerate';
+    status.textContent = `Added ${items.length} items ✓`;
+    window.toast?.(`${items.length} items added!`);
+  } catch (e) {
+    console.error('[shopping] AI generation failed', e, 'raw:', raw?.slice?.(0, 400));
+    btn.disabled = false; btn.textContent = '🤖 Generate List';
+    const msg = (e?.message || 'Failed').slice(0, 90);
+    status.textContent = '❌ ' + msg;
+    window.toast?.('AI failed — see console for details');
+  }
 }
 
 window.renderShop = renderShop;

@@ -136,17 +136,24 @@ export function renderHabitsToday() {
     const el = document.getElementById('h-' + b); if (!el) return;
     const bH = S.habits.filter(h => h.block === b);
     const doneCount = bH.filter(h => doneToday(h)).length;
+    const pct = bH.length ? Math.round(doneCount / bH.length * 100) : 0;
     const open = hbOpen[b] !== false;
+    const barColor = pct === 100 ? 'var(--green)' : pct >= 50 ? 'var(--teal)' : 'var(--violet)';
     el.innerHTML = `<div class="card" style="margin-bottom:10px">
-      <div class="card-header" style="margin-bottom:${open && bH.length ? '12' : '0'}px;cursor:pointer" onclick="toggleHabitBlock('${b}')">
-        <div style="display:flex;align-items:center;gap:8px;flex:1">
+      <div class="card-header" style="margin-bottom:8px;cursor:pointer" onclick="toggleHabitBlock('${b}')">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
           <span style="font-size:18px">${blockIcons[b]}</span>
           <span class="card-title" style="margin:0;text-transform:capitalize">${b}</span>
           <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${doneCount}/${bH.length}</span>
+          ${bH.length ? `
+            <div class="block-progress" style="flex:1;min-width:60px;display:flex;align-items:center;gap:6px;margin-left:4px">
+              <div class="progress-track" style="flex:1;margin:0;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div class="fill" style="background:${barColor};width:${pct}%;height:100%;transition:width 0.3s"></div></div>
+              <span style="font-size:11px;color:${pct === 100 ? 'var(--green)' : 'var(--text3)'};font-family:'DM Mono',monospace;min-width:32px;text-align:right">${pct}%</span>
+            </div>` : ''}
         </div>
-        <span style="color:var(--text3);font-size:12px">${open ? '▾' : '▸'}</span>
+        <span style="color:var(--text3);font-size:12px;flex-shrink:0">${open ? '▾' : '▸'}</span>
       </div>
-      ${open ? (bH.length ? bH.map(h => renderHabitCard(h)).join('') : '<div style="color:var(--text3);font-size:13px;padding:4px">No habits here yet</div>') : ''}
+      ${open ? (bH.length ? `<div style="padding-top:4px">${bH.map(h => renderHabitCard(h)).join('')}</div>` : '<div style="color:var(--text3);font-size:13px;padding:4px">No habits here yet</div>') : ''}
     </div>`;
     wireGestures(el);
   });

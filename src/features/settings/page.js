@@ -5,12 +5,15 @@ import { getReminderSettings, toggleReminders, saveReminderSettings } from '../.
 import { renderBackupList } from '../../core/backup.js';
 import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
 import { renderCloudSyncSection } from './cloudSyncUI.js';
+import { renderFeatureToggles, applyFeatureVisibility } from './featureToggles.js';
 
 export function renderPasscodeSection() {
   renderReminderSection();
   renderBackupList();
+  renderFeatureToggles();
   renderWidgetSettings();
   renderCloudSyncSection();
+  applyFeatureVisibility();
   const set = document.getElementById('passcode-set');
   const manage = document.getElementById('passcode-manage');
   const status = document.getElementById('passcode-status');

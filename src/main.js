@@ -76,6 +76,7 @@ import { renderSleep } from './features/sleep/page.js';
 import { startOnboarding } from './ui/onboarding.js';
 import './core/cloudSync.js';
 import './features/settings/cloudSyncUI.js';
+import { applyFeatureVisibility } from './features/settings/featureToggles.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -148,6 +149,7 @@ renderAll();
 renderProfile();
 applyAIVis();
 checkBadges();
+applyFeatureVisibility();
 startOnboarding();
 
 // Nav haptic patch
