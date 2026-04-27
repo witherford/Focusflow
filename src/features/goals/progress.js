@@ -11,7 +11,16 @@ export function linkedHabits(goalId) {
 }
 
 export function accruedMinutesFor(goalId) {
-  return linkedTasks(goalId).reduce((sum, t) => sum + (t.accruedMinutes || 0), 0);
+  const taskMin = linkedTasks(goalId).reduce((sum, t) => sum + (t.accruedMinutes || 0), 0);
+  const goal = (S.goals || []).find(g => g.id === goalId);
+  let msMin = 0;
+  if (goal && Array.isArray(goal.milestones)) {
+    for (const m of goal.milestones) {
+      msMin += m.accruedMinutes || 0;
+      for (const s of (m.steps || [])) msMin += s.accruedMinutes || 0;
+    }
+  }
+  return taskMin + msMin;
 }
 
 // 7-day completion rate for a habit (0..1)
@@ -28,12 +37,21 @@ export function habitWeekHitRate(h) {
 export function goalProgress(goal) {
   const ms = goal.milestones || [];
   const msDone = ms.filter(m => m.done).length;
+  // Steps fold in as fractional progress: each milestone with N steps contributes
+  // (stepsDone / N) toward "done" alongside its own done flag.
+  let stepDone = 0, stepTotal = 0;
+  for (const m of ms) {
+    if (Array.isArray(m.steps) && m.steps.length) {
+      stepTotal += m.steps.length;
+      stepDone += m.steps.filter(s => s.done).length;
+    }
+  }
   const tasks = linkedTasks(goal.id);
   const taskDone = tasks.filter(t => t.done).length;
   const habits = linkedHabits(goal.id);
 
-  let done = msDone + taskDone;
-  let total = ms.length + tasks.length;
+  let done = msDone + taskDone + stepDone;
+  let total = ms.length + tasks.length + stepTotal;
 
   // Each linked habit contributes its 7-day hit rate (0..1) into both done and total.
   for (const h of habits) {

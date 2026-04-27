@@ -41,19 +41,39 @@ export function renderDash() {
     const dwMin = (window.getTodayDwMin?.() || 0);
     setText('s-focus', (dwMin / 60).toFixed(1) + 'h');
     setText('s-streak', calcStreak_global());
+    renderLevelTile();
   }
 
   if (isWidgetOn('schedule'))   renderSchedule();   else clear('dash-schedule');
   if (isWidgetOn('checkin'))    renderCheckin();    else clear('dash-checkin');
+  if (isWidgetOn('timeblocks')) renderTimeblocks(); else clear('dash-timeblocks');
   if (isWidgetOn('allday'))     renderAllDay();     else clear('dash-allday');
-  if (isWidgetOn('upnext'))     renderUpNext();     else clear('dash-up-next');
   if (isWidgetOn('quickstart')) renderQuickStart(); else clear('dash-quickstart');
   if (isWidgetOn('tasksdue'))   renderTasksDue();   else clear('dash-tasks-due');
   if (isWidgetOn('heatstrip'))  renderHeatStrip();  else clear('dash-heatstrip');
   if (isWidgetOn('goals'))      renderGoalsDash();  else clear('dash-goals');
   if (isWidgetOn('priorities')) renderPriorities(); else clear('dash-priorities');
   if (isWidgetOn('badhabits'))  renderBadHabits();  else { const el = document.getElementById('dash-bad-habits'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } }
-  if (isWidgetOn('timeblocks')) renderTimeblocks(); else clear('dash-timeblocks');
+}
+
+function renderLevelTile() {
+  const el = document.getElementById('dash-level-tile'); if (!el) return;
+  const p = window.gamificationProgress?.() || null;
+  if (!p) {
+    // Fallback if helper not exposed: import directly
+    try {
+      const mod = window.S?.gamification;
+      if (!mod) { el.innerHTML = '<div class="stat-num">L1</div><div class="stat-label">Level</div>'; return; }
+    } catch {}
+  }
+  const prog = p || { level: 1, into: 0, need: 100, pct: 0, xp: 0 };
+  el.innerHTML = `
+    <div class="level-badge">L${prog.level}</div>
+    <div class="xp-bar">
+      <div class="xp-label"><span>Level ${prog.level}</span><span>${prog.into}/${prog.need} xp</span></div>
+      <div class="xp-track"><div class="xp-fill" style="width:${prog.pct}%"></div></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">${prog.xp} XP total</div>
+    </div>`;
 }
 
 function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }

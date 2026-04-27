@@ -66,19 +66,72 @@ export function playChime(kind = 'end') {
   } catch (e) { /* user-gesture not yet given — silent */ }
 }
 
-// Speech synthesis. Cheaper than recording audio; respects device voice.
-// Cancels any pending utterance so two announcements never overlap.
+// Speech synthesis. Picks the most "human" voice available on the device.
+// Many platforms ship higher-quality "neural" voices alongside the legacy
+// robotic ones — we prefer those.
+let _voicesCache = null;
+let _bestVoiceCache = null;
+
+function loadVoices() {
+  const synth = window.speechSynthesis;
+  if (!synth) return [];
+  const v = synth.getVoices() || [];
+  if (v.length) _voicesCache = v;
+  return _voicesCache || [];
+}
+
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  // Some browsers fire voiceschanged after first call to getVoices.
+  window.speechSynthesis.onvoiceschanged = () => { _voicesCache = window.speechSynthesis.getVoices(); _bestVoiceCache = null; };
+  // Prime the cache.
+  loadVoices();
+}
+
+// Priority lists — earlier patterns win. These cover the most pleasant voices
+// available across iOS, macOS, Android, Windows, and Chrome cloud voices.
+const VOICE_PRIORITIES = [
+  /Samantha/i,                                    // iOS / macOS
+  /Microsoft (Aria|Jenny|Sonia|Libby) (Online|Neural)/i, // Windows neural
+  /Google UK English Female/i,                    // Chrome
+  /Google US English/i,                           // Chrome (decent)
+  /en-(GB|US|AU|IE)-(Wavenet|Neural)/i,           // GCP TTS
+  /Karen|Moira|Tessa|Fiona|Veena|Daniel/i,        // macOS premium
+  /Microsoft Zira/i,                              // Windows fallback
+];
+
+function pickBestVoice(preferLang = 'en') {
+  if (_bestVoiceCache) return _bestVoiceCache;
+  const voices = loadVoices();
+  if (!voices.length) return null;
+  for (const re of VOICE_PRIORITIES) {
+    const v = voices.find(x => re.test(x.name));
+    if (v) { _bestVoiceCache = v; return v; }
+  }
+  // Otherwise: prefer non-default English voice that mentions "natural" / "enhanced".
+  let v = voices.find(x => /natural|neural|enhanced|premium/i.test(x.name) && x.lang?.startsWith(preferLang));
+  if (!v) v = voices.find(x => x.lang?.startsWith(preferLang) && !x.localService); // cloud voices
+  if (!v) v = voices.find(x => x.lang?.startsWith(preferLang));
+  _bestVoiceCache = v || null;
+  return _bestVoiceCache;
+}
+
 export function speak(text, opts = {}) {
   try {
     const synth = window.speechSynthesis; if (!synth || !text) return;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = opts.rate ?? 1.0;
-    u.pitch = opts.pitch ?? 1.0;
+    // Slightly slower + warmer pitch reads more "human" for guided content.
+    u.rate = opts.rate ?? 0.92;
+    u.pitch = opts.pitch ?? 1.02;
     u.volume = opts.volume ?? 1.0;
+    const v = pickBestVoice(opts.lang || 'en');
+    if (v) { u.voice = v; u.lang = v.lang; }
     synth.speak(u);
   } catch (e) {}
 }
+
+export function listVoices() { return loadVoices().map(v => ({ name: v.name, lang: v.lang, localService: v.localService })); }
+if (typeof window !== 'undefined') window.listVoices = listVoices;
 
 window.stopAmbient = stopAmbient;
 window.playAmbient = playAmbient;

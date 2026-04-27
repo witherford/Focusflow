@@ -77,6 +77,7 @@ import { startOnboarding } from './ui/onboarding.js';
 import './core/cloudSync.js';
 import './features/settings/cloudSyncUI.js';
 import { applyFeatureVisibility } from './features/settings/featureToggles.js';
+import { startIconNormalizer } from './ui/icons.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -150,6 +151,7 @@ renderProfile();
 applyAIVis();
 checkBadges();
 applyFeatureVisibility();
+startIconNormalizer();
 startOnboarding();
 
 // Nav haptic patch

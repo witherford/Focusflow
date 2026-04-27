@@ -21,13 +21,19 @@ export function attachHabitGestures(el, { onTap, onDoubleTap, onTripleTap, onLon
     longFired = false;
     moved = false;
     skipGesture = isInteractiveTarget(e);
-    if (skipGesture) return;
+    if (skipGesture) {
+      // Tapping a button must not be interpreted as completing the habit. Cancel
+      // any pending multi-tap from a previous interaction so its setTimeout
+      // doesn't fire after the user moves to the edit / delete button.
+      clearTimeout(multiTimer); multiTimer = null;
+      tapCount = 0;
+      return;
+    }
     startX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
     startY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
     if (onLongPress) {
       pressTimer = setTimeout(() => {
         longFired = true;
-        // cancel any pending multi-tap
         clearTimeout(multiTimer); tapCount = 0;
         onLongPress({ event: e });
       }, LONG_PRESS_MS);

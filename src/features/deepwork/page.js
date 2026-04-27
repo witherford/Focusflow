@@ -116,16 +116,58 @@ export function dwFullscreen() {
   window.openFullscreenTimer({ getText, getPhase, getPct });
 }
 
+// Active "linked target" — set by goals page when user clicks the focus button
+// on a milestone or step. Cleared after a session is logged or via UI button.
+let _dwLink = null;
+
+export function dwLinkMilestone(link) {
+  _dwLink = link || null;
+  // Reflect into label field so the user sees the context
+  const labelEl = document.getElementById('dw-label');
+  if (labelEl && link?.label) labelEl.value = link.label;
+  renderDwLink();
+}
+
+export function dwClearLink() { _dwLink = null; renderDwLink(); }
+
+export function renderDwLink() {
+  const el = document.getElementById('dw-link-banner'); if (!el) return;
+  if (_dwLink) {
+    el.style.display = '';
+    el.innerHTML = `<span style="flex:1;font-size:12px">🧠 Linked: <strong>${_dwLink.label}</strong></span><button class="btn btn-xs" onclick="dwClearLink()">Unlink</button>`;
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
+
 export function logDwMin(min) {
   const label = document.getElementById('dw-label')?.value || 'Focus session';
   const taskId = document.getElementById('dw-task-link')?.value || null;
   const session = { date: today(), min, label, ts: Date.now() };
+  // 1. Task link takes priority if user picked one in the dropdown
   if (taskId) {
     const t = S.tasks.find(x => x.id === taskId);
     if (t) {
       t.accruedMinutes = (t.accruedMinutes || 0) + min;
       session.taskId = taskId;
       if (t.goalId) session.goalId = t.goalId;
+    }
+  }
+  // 2. Milestone / step link from goals page (if no task link is set)
+  if (!taskId && _dwLink) {
+    session.goalId = _dwLink.goalId;
+    session.milestoneId = _dwLink.milestoneId || null;
+    session.stepId = _dwLink.stepId || null;
+    const g = S.goals.find(x => x.id === _dwLink.goalId);
+    const m = g?.milestones?.find(x => x.id === _dwLink.milestoneId);
+    if (m) {
+      if (_dwLink.stepId) {
+        const st = m.steps?.find(s => s.id === _dwLink.stepId);
+        if (st) st.accruedMinutes = (st.accruedMinutes || 0) + min;
+      } else {
+        m.accruedMinutes = (m.accruedMinutes || 0) + min;
+      }
     }
   }
   S.deepwork.sessions.push(session);
@@ -144,7 +186,7 @@ export function populateDwTaskLink() {
 export function saveDwTarget() { S.deepwork.target = parseInt(document.getElementById('dw-target')?.value || 4); save(); updateDwProg(); }
 export function getTodayDwMin() { return S.deepwork.sessions.filter(s => s.date === today()).reduce((a, s) => a + s.min, 0); }
 function updateDwProg() { const min = getTodayDwMin(), target = (S.deepwork.target || 4) * 60, pct = Math.min(100, Math.round(min / target * 100)); const f = document.getElementById('dw-prog-fill'); if (f) f.style.width = pct + '%'; const l = document.getElementById('dw-prog-label'); if (l) l.textContent = Math.round(min) + 'min/' + (S.deepwork.target || 4) + 'h'; }
-export function renderDwLog() { populateDwTaskLink(); syncCfgInputs(); const el = document.getElementById('dw-log'); if (!el) return; const sessions = [...S.deepwork.sessions].reverse().slice(0, 20); el.innerHTML = sessions.length ? sessions.map(s => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:500">${s.label}</span><span style="color:var(--text3);font-family:'DM Mono',monospace">${s.date} · ${s.min}min</span></div>`).join('') : '<div style="color:var(--text3);font-size:12px">No sessions yet</div>'; updateDwProg(); }
+export function renderDwLog() { populateDwTaskLink(); syncCfgInputs(); renderDwLink(); const el = document.getElementById('dw-log'); if (!el) return; const sessions = [...S.deepwork.sessions].reverse().slice(0, 20); el.innerHTML = sessions.length ? sessions.map(s => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:500">${s.label}</span><span style="color:var(--text3);font-family:'DM Mono',monospace">${s.date} · ${s.min}min</span></div>`).join('') : '<div style="color:var(--text3);font-size:12px">No sessions yet</div>'; updateDwProg(); }
 
 window.renderPresets = renderPresets;
 window.applyPreset = applyPreset;
@@ -162,3 +204,6 @@ window.renderDwLog = renderDwLog;
 window.populateDwTaskLink = populateDwTaskLink;
 window.dwFullscreen = dwFullscreen;
 window.saveDwCfg = saveDwCfg;
+window.dwLinkMilestone = dwLinkMilestone;
+window.dwClearLink = dwClearLink;
+window.renderDwLink = renderDwLink;

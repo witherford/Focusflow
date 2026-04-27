@@ -82,23 +82,23 @@
     </div>
   </div>
   <div style="padding:0 20px">
-    <div class="stat-grid" id="stat-grid">
+    <div class="stat-grid stat-grid-with-level" id="stat-grid">
       <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="s-habits">0%</div><div class="stat-label">Habits</div></div>
       <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="s-tasks">0</div><div class="stat-label">Done</div></div>
       <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="s-focus">0h</div><div class="stat-label">Focus</div></div>
       <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="s-streak">0</div><div class="stat-label">Streak</div></div>
+      <div class="stat-card stat-level-tile" id="dash-level-tile" style="--accent:var(--violet);grid-column:span 2;text-align:left"></div>
     </div>
     <div id="dash-schedule" style="margin-bottom:14px"></div>
     <div id="dash-checkin" style="margin-bottom:14px"></div>
+    <div id="dash-timeblocks" style="margin-bottom:14px"></div>
     <div id="dash-allday" style="margin-bottom:14px"></div>
-    <div id="dash-up-next" style="margin-bottom:14px"></div>
     <div id="dash-quickstart" style="margin-bottom:14px"></div>
     <div id="dash-tasks-due" style="margin-bottom:14px"></div>
     <div id="dash-heatstrip" style="margin-bottom:14px"></div>
     <div id="dash-goals" style="margin-bottom:14px"></div>
     <div id="dash-priorities" style="margin-bottom:14px"></div>
     <div id="dash-bad-habits" style="margin-bottom:14px"></div>
-    <div id="dash-timeblocks"></div>
   </div>
   <button class="fab" id="quickCaptureFab" aria-label="Quick capture" onclick="openQuickCapture()">＋</button>
 </div>
@@ -250,6 +250,8 @@
     </div>
   </div>
   <div class="section">
+    <div id="dw-link-banner" style="display:none;background:var(--violet-bg);border:1px solid var(--violet);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
+
     <div class="ambient-card">
       <div class="card-header" style="margin-bottom:8px"><div class="card-title">🎧 Ambient Audio</div></div>
       <select id="dw-ambient" onchange="playAmbient(this.value)">

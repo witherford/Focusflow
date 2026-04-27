@@ -11,7 +11,7 @@ import { speak, playChime, playAmbient, stopAmbient } from '../../core/audio.js'
 export const GUIDED_LIBRARY = [
   {
     id: 'gm-bodyscan-10', name: 'Body Scan', icon: '🌿', mins: 10,
-    desc: 'A full-body relaxation, head to toes', sound: 'rain',
+    desc: 'A full-body relaxation, head to toes', sound: '',
     cues: [
       [2, 'Welcome. Find a comfortable position, sitting or lying down. Let your hands rest, and allow your eyes to gently close.'],
       [22, 'Begin by taking a slow, deep breath in through your nose. And a long, gentle exhale through your mouth. Two more like that.'],
@@ -43,7 +43,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-loving-10', name: 'Loving-Kindness', icon: '💗', mins: 10,
-    desc: 'Send goodwill to yourself and others', sound: 'waves',
+    desc: 'Send goodwill to yourself and others', sound: '',
     cues: [
       [2, 'Sit comfortably. Take three slow breaths to settle.'],
       [40, 'Bring to mind the image of yourself, just as you are. Silently say: "May I be safe. May I be well. May I be at ease."'],
@@ -72,7 +72,7 @@ export const GUIDED_LIBRARY = [
   },
   {
     id: 'gm-evening-10', name: 'Evening Wind-Down', icon: '🌙', mins: 10,
-    desc: 'Release the day, prepare for sleep', sound: 'brown',
+    desc: 'Release the day, prepare for sleep', sound: '',
     cues: [
       [2, 'Lie down or sit comfortably. Let your body be heavy.'],
       [20, 'Take a slow inhale… and a longer exhale. Lengthen the out-breath.'],

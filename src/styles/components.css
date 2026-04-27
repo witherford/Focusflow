@@ -14,7 +14,11 @@
 .btn-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; min-height: 28px; }
 .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text3); cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; touch-action: manipulation; }
 .btn-icon:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn-icon.danger { color: #888; }
 .btn-icon.danger:hover { background: var(--rose-bg); color: var(--rose); border-color: var(--rose); }
+/* Inline trash SVG for delete buttons — neutral grey, gains rose colour on hover via currentColor */
+.icon-trash { width: 16px; height: 16px; display: inline-block; vertical-align: middle; }
+.icon-trash svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Cards */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; }
@@ -25,6 +29,7 @@
 
 /* Stats */
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-grid.stat-grid-with-level { grid-template-columns: repeat(6, 1fr); }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 12px; text-align: center; position: relative; overflow: hidden; }
 .stat-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 60px; height: 60px; border-radius: 50%; background: var(--accent, var(--violet)); opacity: 0.07; }
 .stat-num { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; color: var(--accent, var(--violet)); }
@@ -139,9 +144,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 /* Responsive */
 @media (max-width: 768px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid.stat-grid-with-level { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid.stat-grid-with-level .stat-level-tile { grid-column: span 2; }
   .form-grid, .form-grid3 { grid-template-columns: 1fr; }
   .card { border-radius: 12px; }
 }
+
+/* Level tile inline on dashboard */
+.stat-level-tile { padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.stat-level-tile .level-badge { width: 40px; height: 40px; font-size: 14px; flex-shrink: 0; }
+.stat-level-tile .xp-bar { flex: 1; min-width: 0; }
+.stat-level-tile .xp-bar .xp-label { font-size: 10px; }
+.stat-level-tile .xp-bar .xp-track { height: 5px; }
 
 /* Phase 4 — habit cards, progress rings, tiered streaks */
 .habit-row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; background:var(--bg2); margin-bottom:6px; cursor:pointer; user-select:none; touch-action:manipulation; transition:background .15s; }

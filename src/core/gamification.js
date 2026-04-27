@@ -112,6 +112,7 @@ export function renderBadges() {
 }
 
 window.awardXP = award;
+window.gamificationProgress = progress;
 window.renderLevelCard = renderLevelCard;
 window.renderBadges = renderBadges;
 window.checkBadges = checkBadges;

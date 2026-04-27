@@ -70,6 +70,17 @@
 .kanban-num { font-size: 36px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
 @media (max-width: 768px) { .kanban-grid { grid-template-columns: repeat(3, 1fr); } }
 
+/* Milestone sections (Goals page) */
+.ms-section { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; padding: 10px 12px; transition: border-color 0.15s; }
+.ms-section.is-done { opacity: 0.7; }
+.ms-section .ms-header { display: flex; align-items: center; gap: 8px; }
+.ms-section.is-done .milestone-text { text-decoration: line-through; color: var(--text3); }
+.ms-section .ms-steps { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.ms-section .step-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; min-height: 32px; }
+.ms-section .step-row.is-done .milestone-text { text-decoration: line-through; color: var(--text3); }
+.ms-section .step-row .milestone-check { width: 14px; height: 14px; font-size: 9px; }
+.btn-icon.btn-xs { width: 26px; height: 26px; font-size: 12px; }
+
 /* Goals */
 .goal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; overflow: hidden; }
 .goal-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
