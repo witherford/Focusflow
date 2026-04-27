@@ -3,7 +3,9 @@ import { S, today, uid, f2, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
 import { playChime } from '../../core/audio.js';
 
-const medSoundsOn = () => (S.meditation.cfg ||= { sounds: true }).sounds;
+const medCfg = () => (S.meditation.cfg ||= { sounds: true, fullscreen: false });
+const medSoundsOn = () => medCfg().sounds;
+const medFullscreenOn = () => medCfg().fullscreen === true;
 
 const fmtSecs = s => f2(Math.floor(s / 60)) + ':' + f2(s % 60);
 let medInt = null, medRunning = false, medSecs = 0;
@@ -17,23 +19,76 @@ export function setMedSound(btn, sound) {
 export function setMedDur(min) { const inp = document.getElementById('med-dur'); if (inp) { inp.value = min; medReset(); } }
 
 export function medToggle() {
-  if (medRunning) { clearInterval(medInt); medRunning = false; document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'PAUSED'; window.relWL(); }
-  else {
+  if (medRunning) {
+    clearInterval(medInt); medRunning = false;
+    document.getElementById('med-btn').textContent = '▶';
+    document.getElementById('med-phase').textContent = 'PAUSED';
+    window.relWL();
+  } else {
     if (medSecs === 0) medSecs = medDur();
-    medRunning = true; document.getElementById('med-btn').textContent = '⏸'; document.getElementById('med-phase').textContent = 'MEDITATING'; window.reqWL();
+    medRunning = true;
+    document.getElementById('med-btn').textContent = '⏸';
+    document.getElementById('med-phase').textContent = 'MEDITATING';
+    window.reqWL();
     if (medSoundsOn()) playChime('start');
+    if (medFullscreenOn()) medFullscreen();
     medInt = setInterval(() => {
       medSecs--;
       const el = document.getElementById('med-timer'); if (el) el.textContent = fmtSecs(medSecs);
       const ring = document.querySelector('.med-ring-progress');
       if (ring) { const total = medDur(), circ = 678.6; ring.style.strokeDashoffset = Math.max(0, circ * (medSecs / total)); }
       updateMedProg();
-      if (medSecs <= 0) { clearInterval(medInt); medRunning = false; window.relWL(); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'COMPLETE ✓'; haptic('success'); if (medSoundsOn()) playChime('end'); logMed(parseInt(document.getElementById('med-dur')?.value || 10)); medSecs = 0; }
+      if (medSecs <= 0) {
+        clearInterval(medInt); medRunning = false; window.relWL();
+        document.getElementById('med-btn').textContent = '▶';
+        document.getElementById('med-phase').textContent = 'COMPLETE ✓';
+        haptic('success');
+        if (medSoundsOn()) playChime('end');
+        logMed(parseInt(document.getElementById('med-dur')?.value || 10));
+        medSecs = 0;
+        window.closeFullscreenTimer?.();
+      }
     }, 1000);
   }
 }
-export function saveMedCfg() { (S.meditation.cfg ||= { sounds: true }).sounds = !!document.getElementById('med-cfg-sounds')?.checked; save(); }
-export function syncMedCfgInputs() { const el = document.getElementById('med-cfg-sounds'); if (el) el.checked = medSoundsOn(); }
+
+export function medFullscreen() {
+  const total = () => medDur();
+  window.openFullscreenTimer?.({
+    getText: () => document.getElementById('med-timer')?.textContent || '--:--',
+    getPhase: () => document.getElementById('med-phase')?.textContent || '',
+    getPct: () => {
+      const t = total();
+      return t ? Math.round((1 - medSecs / t) * 100) : 0;
+    },
+  });
+}
+
+export function saveMedCfg() {
+  const c = medCfg();
+  c.sounds = !!document.getElementById('med-cfg-sounds')?.checked;
+  c.fullscreen = !!document.getElementById('med-cfg-fullscreen')?.checked;
+  save();
+}
+
+export function syncMedCfgInputs() {
+  const s = document.getElementById('med-cfg-sounds'); if (s) s.checked = medSoundsOn();
+  const f = document.getElementById('med-cfg-fullscreen'); if (f) f.checked = medFullscreenOn();
+}
+
+// Reset today's meditation minutes — two-step confirmation to avoid accidents.
+export function resetTodayMed() {
+  const td = today();
+  const todays = (S.meditation.sessions || []).filter(s => s.date === td);
+  const total = todays.reduce((a, s) => a + (s.min || 0), 0);
+  if (!todays.length) { window.toast?.('No sessions logged today'); return; }
+  if (!confirm(`Reset today's meditation progress? This will remove ${todays.length} session${todays.length === 1 ? '' : 's'} (${total} min).`)) return;
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+  S.meditation.sessions = (S.meditation.sessions || []).filter(s => s.date !== td);
+  save();
+  renderMedStats(); window.renderHeatmaps?.(); updateMedProg();
+  window.toast?.(`Reset · removed ${todays.length} session${todays.length === 1 ? '' : 's'}`);
+}
 export function medReset() { clearInterval(medInt); medRunning = false; medSecs = 0; window.relWL(); const el = document.getElementById('med-timer'); if (el) el.textContent = f2(medDur() / 60) + ':00'; const ph = document.getElementById('med-phase'); if (ph) ph.textContent = 'READY'; const btn = document.getElementById('med-btn'); if (btn) btn.textContent = '▶'; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; }
 export function medSkip() { if (!medRunning && medSecs === 0) return; clearInterval(medInt); medRunning = false; window.relWL(); const elapsed = Math.max(1, Math.round((medDur() - medSecs) / 60)); document.getElementById('med-btn').textContent = '▶'; document.getElementById('med-phase').textContent = 'LOGGED ✓'; logMed(elapsed); medSecs = 0; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; window.toast('Session logged: ' + elapsed + ' min ✓'); }
 export function logMed(min) { if (!S.meditation.sessions) S.meditation.sessions = []; S.meditation.sessions.push({ date: today(), min: min || parseInt(document.getElementById('med-dur')?.value || 10), ts: Date.now() }); save(); renderMedStats(); window.renderHeatmaps(); updateMedProg(); }
@@ -140,3 +195,5 @@ window.saveBreathPreset = saveBreathPreset;
 window.confirmSaveBreathPreset = confirmSaveBreathPreset;
 window.deleteBreathPreset = deleteBreathPreset;
 window.saveMedCfg = saveMedCfg;
+window.medFullscreen = medFullscreen;
+window.resetTodayMed = resetTodayMed;

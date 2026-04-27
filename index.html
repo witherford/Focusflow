@@ -400,8 +400,12 @@
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today's progress</span><span id="med-prog-label">0 / 10 min</span></div>
         <div class="progress-track"><div class="fill" id="med-prog-fill" style="background:var(--teal);width:0%"></div></div>
       </div>
-      <div style="padding:10px 4px 0">
+      <div style="padding:10px 4px 0;display:flex;flex-direction:column;gap:6px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" id="med-cfg-sounds" checked onchange="saveMedCfg()"> Start / end chime</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" id="med-cfg-fullscreen" onchange="saveMedCfg()"> Start in fullscreen</label>
+      </div>
+      <div style="padding:14px 4px 0;display:flex;justify-content:flex-end">
+        <button class="btn btn-sm" style="font-size:11px" onclick="resetTodayMed()">↺ Reset today's progress</button>
       </div>
     </div>
 
