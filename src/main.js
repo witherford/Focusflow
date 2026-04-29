@@ -171,9 +171,14 @@ applyFeatureVisibility();
 startIconNormalizer();
 startOnboarding();
 
-// Show app version in sidebar header.
+// Show app version in sidebar header + "latest version" status block, then
+// kick off a one-shot background check.
 const _verEl = document.getElementById('logoVersion');
 if (_verEl) _verEl.textContent = 'V' + APP_VERSION;
+import('./core/updater.js').then(({ renderSidebarUpdateStatus, autoCheckOnStartup }) => {
+  renderSidebarUpdateStatus();
+  autoCheckOnStartup();
+});
 
 // Nav haptic patch
 document.querySelectorAll('.mob-nav-item,.nav-item').forEach(el => {

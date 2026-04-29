@@ -1,5 +1,22 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
+
+// Read the canonical app version from src/core/version.js so the deployed
+// bundle and the static /version.json always agree.
+function emitVersionJson() {
+  return {
+    name: 'emit-version-json',
+    buildStart() {
+      try {
+        const src = readFileSync('./src/core/version.js', 'utf8');
+        const m = /APP_VERSION\s*=\s*['"]([^'"]+)['"]/.exec(src);
+        const version = m ? m[1] : '0.0.0';
+        this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version, builtAt: new Date().toISOString() }) });
+      } catch (e) { console.warn('[emit-version-json] could not derive version', e); }
+    },
+  };
+}
 
 export default defineConfig({
   root: '.',
@@ -16,6 +33,7 @@ export default defineConfig({
     open: true,
   },
   plugins: [
+    emitVersionJson(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon-48x48.png', 'apple-touch-icon-180x180.png'],
