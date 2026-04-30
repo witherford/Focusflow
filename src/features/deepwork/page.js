@@ -100,6 +100,8 @@ export function dwReset() { clearInterval(dwInt); dwRunning = false; dwIsBreak =
 export function dwFreeToggle() { if (dwFreeRunning) { clearInterval(dwFreeInt); dwFreeRunning = false; document.getElementById('dw-free-btn').textContent = '▶'; window.relWL(); } else { dwFreeRunning = true; document.getElementById('dw-free-btn').textContent = '⏸'; window.reqWL(); dwFreeInt = setInterval(() => { dwFreeSec++; const el = document.getElementById('dw-free-timer'); if (el) el.textContent = fmtSecs(dwFreeSec); }, 1000); } }
 export function dwFreeReset() { if (dwFreeSec > 0) logDwMin(Math.round(dwFreeSec / 60)); clearInterval(dwFreeInt); dwFreeRunning = false; dwFreeSec = 0; window.relWL(); const el = document.getElementById('dw-free-timer'); if (el) el.textContent = '00:00'; document.getElementById('dw-free-btn').textContent = '▶'; }
 
+export function dwIsRunning() { return dwRunning; }
+
 export function dwFullscreen() {
   const getText = () => document.getElementById('dw-timer')?.textContent || '--:--';
   const getPhase = () => document.getElementById('dw-phase')?.textContent || '';
@@ -113,7 +115,12 @@ export function dwFullscreen() {
     const total = phase === 'BREAK' ? brk : work;
     return total ? Math.round((1 - secs / total) * 100) : 0;
   };
-  window.openFullscreenTimer({ getText, getPhase, getPct });
+  window.openFullscreenTimer({
+    getText, getPhase, getPct,
+    isRunning: dwIsRunning,
+    onToggle:  () => dwToggle(),
+    onReset:   () => dwReset(),
+  });
 }
 
 // Active "linked target" — set by goals page when user clicks the focus button
