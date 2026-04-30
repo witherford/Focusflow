@@ -65,6 +65,8 @@ export function medToggle() {
   }
 }
 
+export function medIsRunning() { return medRunning; }
+
 export function medFullscreen() {
   const total = () => medDur();
   window.openFullscreenTimer?.({
@@ -74,6 +76,9 @@ export function medFullscreen() {
       const t = total();
       return t ? Math.round((1 - medSecs / t) * 100) : 0;
     },
+    isRunning: medIsRunning,
+    onToggle:  () => medToggle(),
+    onReset:   () => medReset(),
   });
 }
 

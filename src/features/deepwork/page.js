@@ -9,14 +9,19 @@ const dwWork = () => parseInt(document.getElementById('dw-work')?.value || 25) *
 const dwBreak = () => parseInt(document.getElementById('dw-break')?.value || 5) * 60;
 
 // Settings helpers — persisted under S.deepwork so they survive reloads.
-const dwCfg = () => (S.deepwork.cfg ||= { sounds: true, autoAdvance: true, announcements: true, announceEvery: 5 });
+// `logIncremental` (default ON) means an early stop logs whatever minutes
+// were spent toward the day's focus / linked task / linked goal, instead of
+// silently throwing them away.
+const dwCfg = () => (S.deepwork.cfg ||= { sounds: true, autoAdvance: true, announcements: true, announceEvery: 5, logIncremental: true });
 function syncCfgInputs() {
   const c = dwCfg();
+  if (c.logIncremental === undefined) c.logIncremental = true;
   const m = (id, prop, val) => { const el = document.getElementById(id); if (el) el[prop] = val; };
   m('dw-cfg-sounds', 'checked', !!c.sounds);
   m('dw-cfg-auto', 'checked', !!c.autoAdvance);
   m('dw-cfg-announce', 'checked', !!c.announcements);
   m('dw-cfg-interval', 'value', c.announceEvery || 5);
+  m('dw-cfg-log-partial', 'checked', c.logIncremental !== false);
 }
 export function saveDwCfg() {
   const c = dwCfg();
@@ -24,6 +29,7 @@ export function saveDwCfg() {
   c.autoAdvance = !!document.getElementById('dw-cfg-auto')?.checked;
   c.announcements = !!document.getElementById('dw-cfg-announce')?.checked;
   c.announceEvery = Math.max(1, parseInt(document.getElementById('dw-cfg-interval')?.value || 5));
+  c.logIncremental = !!document.getElementById('dw-cfg-log-partial')?.checked;
   save();
 }
 function maybeAnnounce(secsLeft, phase) {
@@ -97,6 +103,25 @@ export function dwToggle() {
   }
 }
 export function dwReset() { clearInterval(dwInt); dwRunning = false; dwIsBreak = false; dwSecs = 0; window.relWL(); const el = document.getElementById('dw-timer'); if (el) el.textContent = f2(dwWork() / 60) + ':00'; document.getElementById('dw-start-btn').textContent = '▶'; document.getElementById('dw-phase').textContent = 'WORK'; const ring = document.getElementById('dw-ring'); if (ring) ring.style.strokeDashoffset = 565.5; }
+
+// Explicit "stop & log" — what the user-facing ↺ reset button actually
+// runs. If the toggle is on and the user has spent at least a minute in
+// the current WORK phase, that partial time is logged just like a full
+// session. BREAK phases are never logged. Duration-input onchange handlers
+// keep calling the silent dwReset() so tweaking the work-minute input
+// doesn't accidentally log a session.
+export function dwStopAndLog() {
+  if (dwIsBreak) return dwReset();
+  const total = dwWork();
+  const elapsedSec = Math.max(0, total - dwSecs);
+  const minutes = Math.floor(elapsedSec / 60);
+  const cfg = dwCfg();
+  if (cfg.logIncremental !== false && minutes >= 1) {
+    logDwMin(minutes);
+    window.toast?.(`Logged ${minutes} min`);
+  }
+  dwReset();
+}
 export function dwFreeToggle() { if (dwFreeRunning) { clearInterval(dwFreeInt); dwFreeRunning = false; document.getElementById('dw-free-btn').textContent = '▶'; window.relWL(); } else { dwFreeRunning = true; document.getElementById('dw-free-btn').textContent = '⏸'; window.reqWL(); dwFreeInt = setInterval(() => { dwFreeSec++; const el = document.getElementById('dw-free-timer'); if (el) el.textContent = fmtSecs(dwFreeSec); }, 1000); } }
 export function dwFreeReset() { if (dwFreeSec > 0) logDwMin(Math.round(dwFreeSec / 60)); clearInterval(dwFreeInt); dwFreeRunning = false; dwFreeSec = 0; window.relWL(); const el = document.getElementById('dw-free-timer'); if (el) el.textContent = '00:00'; document.getElementById('dw-free-btn').textContent = '▶'; }
 
@@ -119,7 +144,7 @@ export function dwFullscreen() {
     getText, getPhase, getPct,
     isRunning: dwIsRunning,
     onToggle:  () => dwToggle(),
-    onReset:   () => dwReset(),
+    onReset:   () => dwStopAndLog(),
   });
 }
 
@@ -202,6 +227,7 @@ window.openAddPreset = openAddPreset;
 window.addPreset = addPreset;
 window.dwToggle = dwToggle;
 window.dwReset = dwReset;
+window.dwStopAndLog = dwStopAndLog;
 window.dwFreeToggle = dwFreeToggle;
 window.dwFreeReset = dwFreeReset;
 window.logDwMin = logDwMin;
