@@ -22,6 +22,7 @@ export function logSleep({ date, bedtime, wake, quality, notes }) {
   if (idx >= 0) arr[idx] = entry; else arr.push(entry);
   arr.sort((a, b) => a.date.localeCompare(b.date));
   haptic('light'); save();
+  window.markHabitDoneFromFlow?.('sleep');
   renderSleep();
   window.toast?.('Sleep logged ✓');
 }

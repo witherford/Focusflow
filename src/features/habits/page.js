@@ -18,6 +18,18 @@ export function toggleHabitBlock(b) { hbOpen[b] = !hbOpen[b]; renderHabitsToday(
 // Is a habit "done" for today? Works for both binary and counter modes.
 export function doneToday(h) { return metOn(h, today()); }
 
+// Compact badge shown on a linked habit's row. e.g. "🔗 meditate · 15m".
+export function linkedHabitBadge(h) {
+  if (!h?.linkedType) return '';
+  const cfg = h.linkedConfig || {};
+  const tag = h.linkedType;
+  let suffix = '';
+  if (tag === 'meditate' && cfg.duration) suffix = ' · ' + cfg.duration + 'm';
+  else if (tag === 'deepwork' && cfg.mins) suffix = ' · ' + cfg.mins + 'm';
+  else if (tag === 'sleep' && cfg.targetHrs) suffix = ' · ' + cfg.targetHrs + 'h';
+  return `<span class="link-badge" title="Tap the habit to launch its tool">🔗 ${tag}${suffix}</span>`;
+}
+
 // Render a single card body; used by both morning/afternoon/evening and the flat list.
 function renderHabitCard(h, { flat = false } = {}) {
   const counter = isCounter(h);
@@ -41,6 +53,7 @@ function renderHabitCard(h, { flat = false } = {}) {
     : `<div class="habit-check${done ? ' checked' : ''}">✓</div>`;
 
   const blockBadge = flat ? `<span class="badge badge-violet">${h.block}</span>` : '';
+  const linkBadge = linkedHabitBadge(h);
 
   // Gestures attach to .habit-tap (the inner zone), NOT the row. The
   // edit / delete buttons live as siblings of .habit-tap, so pointer events
@@ -49,7 +62,7 @@ function renderHabitCard(h, { flat = false } = {}) {
     <div class="habit-tap">
       ${ring}
       <div class="habit-info">
-        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}</div>
+        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${linkBadge}</div>
         <div class="habit-meta">${meta}</div>
       </div>
       ${blockBadge}
@@ -125,8 +138,6 @@ export function openLinkedHabit(h) {
   window._ffSessionFlow = { habitId: h.id, kind: h.linkedType, setAt: Date.now() };
   const cfg = h.linkedConfig || {};
   if (h.linkedType === 'meditate') {
-    // Defer config application until we're on the meditation page so the
-    // inputs exist.
     window.goPage?.('meditation');
     setTimeout(() => applyLinkedMeditationConfig(cfg), 60);
   } else if (h.linkedType === 'deepwork') {
@@ -134,7 +145,44 @@ export function openLinkedHabit(h) {
     setTimeout(() => applyLinkedDeepworkConfig(cfg), 60);
   } else if (h.linkedType === 'train') {
     window.goPage?.('fitness');
+  } else if (h.linkedType === 'sleep') {
+    window.goPage?.('sleep');
+    setTimeout(() => applyLinkedSleepConfig(cfg), 60);
+  } else if (h.linkedType === 'journal') {
+    // Journal lives behind a modal — open the modal directly. The journal
+    // page must be the active page so the modal's parent exists.
+    window.goPage?.('journal');
+    setTimeout(() => applyLinkedJournalConfig(cfg), 60);
+  } else if (h.linkedType === 'weight') {
+    window.goPage?.('weight');
+    setTimeout(() => applyLinkedWeightConfig(cfg), 60);
   }
+}
+
+function applyLinkedSleepConfig(cfg) {
+  // Sleep page renders form fields that already default to today's date and
+  // sensible bedtimes. Only thing to surface is a target-hours hint.
+  if (cfg.targetHrs) window.toast?.(`😴 Sleep — target ${cfg.targetHrs}h`);
+  else window.toast?.('😴 Log tonight\'s sleep');
+}
+
+function applyLinkedJournalConfig(cfg) {
+  // Open the existing journal entry modal pre-filled with the prompt as
+  // placeholder text, then focus the textarea.
+  if (typeof window.openAddJournal === 'function') window.openAddJournal();
+  setTimeout(() => {
+    const ta = document.getElementById('j-text');
+    if (ta) {
+      if (cfg.prompt) ta.placeholder = cfg.prompt;
+      ta.focus();
+    }
+  }, 80);
+  window.toast?.('📓 New journal entry');
+}
+
+function applyLinkedWeightConfig(_cfg) {
+  // Weight page already renders a fresh log form. Just announce.
+  window.toast?.('⚖️ Log today\'s weight');
 }
 
 function applyLinkedMeditationConfig(cfg) {
@@ -288,7 +336,7 @@ function populateLinkedGuidedSelect(selectedId) {
 // linked habits are always binary "did the activity = done".
 export function updateLinkedHabitFields() {
   const v = document.getElementById('habit-link-type')?.value || '';
-  ['meditate', 'train', 'deepwork'].forEach(k => {
+  ['meditate', 'train', 'deepwork', 'sleep', 'journal', 'weight'].forEach(k => {
     const el = document.getElementById('linked-config-' + k);
     if (el) el.style.display = v === k ? '' : 'none';
   });
@@ -327,6 +375,8 @@ export function openAddHabit() {
   const ldw = document.getElementById('linked-dw-work'); if (ldw) ldw.value = 25;
   const ldb = document.getElementById('linked-dw-break'); if (ldb) ldb.value = 5;
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = '';
+  const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = '';
+  const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = '';
   populateHabitGoalSelect('');
   toggleCounterFields();
   updateLinkedHabitFields();
@@ -357,6 +407,8 @@ export function openEditHabit(id) {
   const ldw = document.getElementById('linked-dw-work'); if (ldw) ldw.value = lc.mins ?? 25;
   const ldb = document.getElementById('linked-dw-break'); if (ldb) ldb.value = lc.breakMins ?? 5;
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
+  const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = lc.targetHrs ?? '';
+  const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = lc.prompt || '';
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   updateLinkedHabitFields();
@@ -418,13 +470,21 @@ export function saveHabit() {
     };
   } else if (linkedType === 'train') {
     linkedConfig = {};
+  } else if (linkedType === 'sleep') {
+    const t = parseFloat(document.getElementById('linked-sleep-target')?.value);
+    linkedConfig = { targetHrs: isFinite(t) && t > 0 ? t : undefined };
+  } else if (linkedType === 'journal') {
+    linkedConfig = { prompt: (document.getElementById('linked-journal-prompt')?.value || '').trim() };
+  } else if (linkedType === 'weight') {
+    linkedConfig = {};
   }
   // Linked habits are always binary toggles, never counters / all-day.
   const effectiveMode = linkedType ? 'binary' : (allDay ? 'counter' : mode);
+  const linkedIconMap = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️' };
   const data = {
     name,
     block: document.getElementById('habit-block').value,
-    icon: document.getElementById('habit-icon').value || (linkedType === 'meditate' ? '🧘' : linkedType === 'train' ? '🏋️' : linkedType === 'deepwork' ? '🧠' : '●'),
+    icon: document.getElementById('habit-icon').value || (linkedIconMap[linkedType] || '●'),
     mode: effectiveMode,
     journalPrompt,
     goalId,

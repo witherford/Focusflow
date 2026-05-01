@@ -17,6 +17,7 @@ export function logWeight(v, dateKey) {
   arr.sort((a, b) => a.date.localeCompare(b.date));
   S.profile.weight = v; // mirror current weight
   haptic('medium'); save();
+  window.markHabitDoneFromFlow?.('weight');
   renderWeight();
 }
 

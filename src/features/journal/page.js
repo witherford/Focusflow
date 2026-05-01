@@ -40,6 +40,8 @@ export function saveJournal() {
   if (photo) entry.photo = photo;
   if (editId) { const idx = S.journal.findIndex(j => j.id === editId); if (idx > -1) entry.photo = entry.photo || S.journal[idx].photo; if (idx > -1) S.journal[idx] = entry; } else S.journal.push(entry);
   persistAfterMutation(); window.closeModal('m-journal'); renderJournal();
+  // Only auto-tick on a fresh entry (not edits).
+  if (!editId) window.markHabitDoneFromFlow?.('journal');
 }
 
 export function onJournalPhoto(ev) {

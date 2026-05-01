@@ -331,6 +331,9 @@
 .cardio-mod .cm-controls { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
 .cardio-mod .cm-meta { font-size: 11px; color: var(--text3); text-align: center; margin-top: 4px; min-height: 14px; }
 
+/* Linked-habit chip (e.g. "🔗 meditate · 15m") on the habit row */
+.link-badge { display: inline-block; margin-left: 6px; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 600; color: var(--teal); background: var(--teal-bg); border: 1px solid rgba(62,207,176,0.3); border-radius: 8px; padding: 1px 6px; letter-spacing: 0.3px; vertical-align: middle; }
+
 /* Routine editor */
 .day-editor { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; }
 .sec-editor { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; margin-bottom: 6px; }

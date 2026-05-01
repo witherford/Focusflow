@@ -1062,6 +1062,9 @@ Review with team | low | | first pass only"></textarea></div>
     <option value="meditate">🧘 Meditate</option>
     <option value="train">🏋️ Train</option>
     <option value="deepwork">🧠 Deep work</option>
+    <option value="sleep">😴 Sleep log</option>
+    <option value="journal">📓 Journal</option>
+    <option value="weight">⚖️ Weight log</option>
   </select></div>
   <div style="font-size:11px;color:var(--text3);margin:-6px 0 8px">A linked habit jumps to its tool with your settings pre-applied. Completing the activity ticks the habit and grants XP automatically.</div>
 
@@ -1086,6 +1089,23 @@ Review with team | low | | first pass only"></textarea></div>
   <div id="linked-config-train" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
     <div class="card-title" style="margin-bottom:8px;font-size:12px">🏋️ Training</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.5">Tapping this habit jumps to <strong>Training</strong> and pre-loads today's planned workout from your active routine. Saving the workout auto-ticks the habit.</div>
+  </div>
+
+  <div id="linked-config-sleep" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">😴 Sleep log</div>
+    <div class="form-row" style="margin-bottom:0"><label>Target hours (optional)</label><input type="number" id="linked-sleep-target" step="0.5" min="0" placeholder="8"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Tapping the habit jumps to the Sleep page; logging tonight's sleep auto-ticks it.</div>
+  </div>
+
+  <div id="linked-config-journal" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">📓 Journal</div>
+    <div class="form-row" style="margin-bottom:0"><label>Default prompt (optional)</label><input type="text" id="linked-journal-prompt" placeholder="e.g. Three good things from today"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Tapping the habit opens a fresh journal note. Saving the entry auto-ticks the habit.</div>
+  </div>
+
+  <div id="linked-config-weight" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">⚖️ Weight log</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5">Tapping the habit jumps to the Weight page. Logging today's weight auto-ticks it.</div>
   </div>
 
   <div class="form-grid">
