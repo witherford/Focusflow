@@ -84,13 +84,14 @@ function renderRoutinePicker() {
 function routineCardHTML(r, activeId, isCustom) {
   const active = r.id === activeId;
   const dayCount = (r.schedule || []).filter(d => d && d !== 'rest').length;
+  const desc = (r.desc || '').trim();
   return `<div class="routine-card${active ? ' active' : ''}">
-    <div class="rc-info" onclick="activateRoutine('${r.id}')" style="cursor:pointer">
-      <div class="rc-name">${r.name}${active ? ' <span style="color:var(--teal);font-size:11px">· active</span>' : ''}</div>
-      <div class="rc-desc">${r.desc || ''}</div>
+    <div class="rc-info" onclick="activateRoutine('${r.id}')">
+      <div class="rc-name">${r.name}${active ? '<span class="rc-active-tag">· active</span>' : ''}</div>
+      ${desc ? `<div class="rc-desc">${desc}</div>` : ''}
       <div class="rc-meta">${dayCount} days/week · ${r.progression || 'manual'}</div>
     </div>
-    <div style="display:flex;gap:4px;flex-direction:column">
+    <div class="rc-actions">
       <button class="btn-icon" title="Edit" onclick="event.stopPropagation();openRoutineEditor('${r.id}')">✏️</button>
       ${isCustom ? `<button class="btn-icon danger" title="Delete" onclick="event.stopPropagation();deleteRoutine('${r.id}')">🗑</button>` : ''}
     </div>
@@ -119,13 +120,14 @@ function renderScheduledEvents() {
     <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Time-bound entries (e.g. "Yoga 7-8am Mon/Wed/Fri") — show on the dashboard schedule strip too.</div>
     ${routines.length ? routines.map(r => {
       const todayMatch = (r.days || []).includes(todayShort);
-      return `<div class="routine-card${todayMatch ? ' active' : ''}" style="margin-bottom:6px">
+      const notes = (r.notes || '').trim();
+      return `<div class="routine-card${todayMatch ? ' active' : ''}">
         <div class="rc-info">
-          <div class="rc-name">${r.icon || '🏋️'} ${r.name}${todayMatch ? ' <span style="color:var(--teal);font-size:11px">· today</span>' : ''}</div>
+          <div class="rc-name">${r.icon || '🏋️'} ${r.name}${todayMatch ? '<span class="rc-active-tag">· today</span>' : ''}</div>
+          ${notes ? `<div class="rc-desc">${notes}</div>` : ''}
           <div class="rc-meta">${(r.start || '?')}–${(r.end || '?')} · ${(r.days || []).join(', ') || 'no days'}</div>
-          ${r.notes ? `<div class="rc-desc">${r.notes}</div>` : ''}
         </div>
-        <div style="display:flex;gap:4px;flex-direction:column">
+        <div class="rc-actions">
           <button class="btn-icon" onclick="openEditRoutine('${r.id}')">✏️</button>
           <button class="btn-icon danger" onclick="delRoutine('${r.id}')">🗑</button>
         </div>
