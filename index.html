@@ -1056,6 +1056,38 @@ Review with team | low | | first pass only"></textarea></div>
   <div class="modal-handle"></div>
   <div class="modal-title" id="m-habit-title">Add Habit</div>
   <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
+
+  <div class="form-row"><label>🔗 Create a linked habit</label><select id="habit-link-type" onchange="updateLinkedHabitFields()">
+    <option value="">— None (regular habit) —</option>
+    <option value="meditate">🧘 Meditate</option>
+    <option value="train">🏋️ Train</option>
+    <option value="deepwork">🧠 Deep work</option>
+  </select></div>
+  <div style="font-size:11px;color:var(--text3);margin:-6px 0 8px">A linked habit jumps to its tool with your settings pre-applied. Completing the activity ticks the habit and grants XP automatically.</div>
+
+  <div id="linked-config-meditate" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">🧘 Meditation settings</div>
+    <div class="form-grid">
+      <div class="form-row" style="margin-bottom:6px"><label>Duration (min)</label><input type="number" id="linked-med-dur" value="10" min="1"></div>
+      <div class="form-row" style="margin-bottom:6px"><label>Ambient sound</label><select id="linked-med-sound"><option value="">🔇 Silence</option><option value="brown">🤎 Brown noise</option><option value="rain">🌧️ Rain</option><option value="waves">🌊 Waves</option></select></div>
+    </div>
+    <div class="form-row" style="margin-bottom:0"><label>Guided script</label><select id="linked-med-guided"><option value="">— None (silent) —</option></select></div>
+  </div>
+
+  <div id="linked-config-deepwork" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">🧠 Deep-work settings</div>
+    <div class="form-grid">
+      <div class="form-row" style="margin-bottom:6px"><label>Work (min)</label><input type="number" id="linked-dw-work" value="25" min="1"></div>
+      <div class="form-row" style="margin-bottom:6px"><label>Break (min)</label><input type="number" id="linked-dw-break" value="5" min="1"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:0"><label>Session label</label><input type="text" id="linked-dw-label" placeholder="What are you working on?"></div>
+  </div>
+
+  <div id="linked-config-train" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">🏋️ Training</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5">Tapping this habit jumps to <strong>Training</strong> and pre-loads today's planned workout from your active routine. Saving the workout auto-ticks the habit.</div>
+  </div>
+
   <div class="form-grid">
     <div class="form-row"><label>Time block</label><select id="habit-block"><option value="morning">☀️ Morning</option><option value="afternoon">🌤 Afternoon</option><option value="evening">🌙 Evening</option><option value="allday">⏳ All day</option></select></div>
     <div class="form-row"><label>Icon (emoji)</label><input type="text" id="habit-icon" maxlength="2"></div>

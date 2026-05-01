@@ -127,7 +127,15 @@ export function medSkip() {
   const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6';
   window.closeFullscreenTimer?.();
 }
-export function logMed(min) { if (!S.meditation.sessions) S.meditation.sessions = []; S.meditation.sessions.push({ date: today(), min: min || parseInt(document.getElementById('med-dur')?.value || 10), ts: Date.now() }); save(); renderMedStats(); window.renderHeatmaps(); updateMedProg(); }
+export function logMed(min) {
+  if (!S.meditation.sessions) S.meditation.sessions = [];
+  S.meditation.sessions.push({ date: today(), min: min || parseInt(document.getElementById('med-dur')?.value || 10), ts: Date.now() });
+  save();
+  window.awardXP?.('medSession');
+  // Auto-tick a linked habit if the user came in from one.
+  window.markHabitDoneFromFlow?.('meditate');
+  renderMedStats(); window.renderHeatmaps(); updateMedProg();
+}
 function updateMedProg() { const target = S.meditation.target || parseInt(document.getElementById('med-target')?.value || 10); const done = S.meditation.sessions.filter(s => s.date === today()).reduce((a, s) => a + s.min, 0); const pct = Math.min(100, Math.round(done / target * 100)); const fill = document.getElementById('med-prog-fill'); if (fill) fill.style.width = pct + '%'; const lbl = document.getElementById('med-prog-label'); if (lbl) lbl.textContent = done + ' / ' + target + ' min'; }
 export function saveMedTarget() { S.meditation.target = parseInt(document.getElementById('med-target')?.value || 10); save(); updateMedProg(); }
 

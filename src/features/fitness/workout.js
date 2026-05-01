@@ -406,6 +406,7 @@ export function saveWorkout() {
 
   save();
   window.awardXP?.('fitSession');
+  window.markHabitDoneFromFlow?.('train');
   window.closeModal?.('m-workout');
   window.toast?.('Workout saved ✓');
   window.renderTraining?.();

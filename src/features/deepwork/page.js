@@ -203,7 +203,7 @@ export function logDwMin(min) {
     }
   }
   S.deepwork.sessions.push(session);
-  save(); window.awardXP?.('dwSession'); renderDwLog(); updateDwProg(); window.renderHeatmaps?.(); window.renderGoals?.(); window.renderDash?.();
+  save(); window.awardXP?.('dwSession'); window.markHabitDoneFromFlow?.('deepwork'); renderDwLog(); updateDwProg(); window.renderHeatmaps?.(); window.renderGoals?.(); window.renderDash?.();
 }
 export function populateDwTaskLink() {
   const s = document.getElementById('dw-task-link'); if (!s) return;

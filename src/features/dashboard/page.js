@@ -210,7 +210,15 @@ export function renderTimeblocks() {
   }).join('');
 }
 
-export function toggleHabitDash(id) { if (!S.habitLog[today()]) S.habitLog[today()] = {}; S.habitLog[today()][id] = !S.habitLog[today()][id]; haptic('medium'); save(); renderDash(); }
+export function toggleHabitDash(id) {
+  const h = S.habits.find(x => x.id === id);
+  // Linked habits jump to their tool with the saved config — same behaviour as
+  // tapping them on the Habits page.
+  if (h?.linkedType) { window.openLinkedHabit?.(h); return; }
+  if (!S.habitLog[today()]) S.habitLog[today()] = {};
+  S.habitLog[today()][id] = !S.habitLog[today()][id];
+  haptic('medium'); save(); renderDash();
+}
 export function toggleChoreDash(id) {
   const c = S.chores.find(x => x.id === id); if (!c) return;
   const key = effectivePeriodKey(c);

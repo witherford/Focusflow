@@ -93,6 +93,10 @@ function wireGestures(container) {
 }
 
 function handleTap(h) {
+  // Linked habits route to their tool with the saved config pre-applied.
+  // Double-tap / triple-tap / long-press still let the user manually
+  // override (mark done without doing the activity, etc.).
+  if (h.linkedType) { openLinkedHabit(h); return; }
   if (isCounter(h)) {
     const prev = countFor(h);
     const n = increment(h);
@@ -104,6 +108,78 @@ function handleTap(h) {
     return;
   }
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+}
+
+// ── Linked habit dispatch ────────────────────────────────────────────────────
+// Tapping a linked habit sets a transient flow flag, navigates to the right
+// page, and applies the saved config. The corresponding logger reads the
+// flag on session-save and ticks the habit done + awards XP.
+//
+// The flag lives on `window` only — if the user reloads before finishing the
+// session, the flow context is lost (acceptable; they can tap the habit
+// again to reset the context).
+const FLOW_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+export function openLinkedHabit(h) {
+  if (!h?.linkedType) return;
+  window._ffSessionFlow = { habitId: h.id, kind: h.linkedType, setAt: Date.now() };
+  const cfg = h.linkedConfig || {};
+  if (h.linkedType === 'meditate') {
+    // Defer config application until we're on the meditation page so the
+    // inputs exist.
+    window.goPage?.('meditation');
+    setTimeout(() => applyLinkedMeditationConfig(cfg), 60);
+  } else if (h.linkedType === 'deepwork') {
+    window.goPage?.('deepwork');
+    setTimeout(() => applyLinkedDeepworkConfig(cfg), 60);
+  } else if (h.linkedType === 'train') {
+    window.goPage?.('fitness');
+  }
+}
+
+function applyLinkedMeditationConfig(cfg) {
+  // Apply ambient sound first.
+  if (typeof window.playAmbient === 'function') window.playAmbient(cfg.sound || '');
+  document.querySelectorAll('.med-sound-btn').forEach(b => b.classList.toggle('active', b.dataset.sound === (cfg.sound || '')));
+  // Then guided script (this also pre-fills duration with the script's default).
+  if (cfg.guidedScriptId && typeof window.selectGuided === 'function') window.selectGuided(cfg.guidedScriptId);
+  else if (typeof window.clearGuided === 'function') window.clearGuided();
+  // The user's saved duration takes priority — apply it last.
+  const dur = document.getElementById('med-dur'); if (dur && cfg.duration) dur.value = cfg.duration;
+  if (typeof window.medReset === 'function') window.medReset();
+  window.toast?.('🧘 Meditation pre-loaded — hit ▶ when ready');
+}
+
+function applyLinkedDeepworkConfig(cfg) {
+  const w = document.getElementById('dw-work'); if (w && cfg.mins) w.value = cfg.mins;
+  const b = document.getElementById('dw-break'); if (b && cfg.breakMins) b.value = cfg.breakMins;
+  const lbl = document.getElementById('dw-label'); if (lbl) lbl.value = cfg.label || lbl.value;
+  if (typeof window.dwReset === 'function') window.dwReset();
+  window.toast?.('🧠 Deep-work pre-loaded — hit ▶ when ready');
+}
+
+// Called by med / dw / training loggers on session save. Auto-ticks the
+// habit, awards XP, refreshes UI. No-op if the flow doesn't match or has
+// expired.
+export function markHabitDoneFromFlow(kind) {
+  const flow = window._ffSessionFlow;
+  if (!flow || flow.kind !== kind) return false;
+  if (Date.now() - (flow.setAt || 0) > FLOW_TTL_MS) { window._ffSessionFlow = null; return false; }
+  const h = (S.habits || []).find(x => x.id === flow.habitId);
+  if (!h) { window._ffSessionFlow = null; return false; }
+  // Tick today (binary)
+  if (!S.habitLog[today()]) S.habitLog[today()] = {};
+  const wasDone = !!S.habitLog[today()][h.id];
+  S.habitLog[today()][h.id] = true;
+  if (!wasDone) {
+    haptic('medium');
+    window.awardXP?.('habit');
+    window.toast?.(`✓ Habit ticked: ${h.name}`);
+  }
+  window._ffSessionFlow = null;
+  save();
+  renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+  return true;
 }
 
 function handleDoubleTap(h) {
@@ -201,6 +277,35 @@ function populateHabitGoalSelect(selectedId) {
   sel.innerHTML = '<option value="">— none —</option>' + (S.goals || []).map(g => `<option value="${g.id}"${g.id === selectedId ? ' selected' : ''}>${g.name}</option>`).join('');
 }
 
+function populateLinkedGuidedSelect(selectedId) {
+  const sel = document.getElementById('linked-med-guided'); if (!sel) return;
+  const lib = window.GUIDED_LIBRARY || [];
+  sel.innerHTML = '<option value="">— None (silent) —</option>' + lib.map(g => `<option value="${g.id}"${g.id === selectedId ? ' selected' : ''}>${g.icon} ${g.name} (${g.mins}m default)</option>`).join('');
+}
+
+// Show / hide the per-type config block based on the dropdown choice. Also
+// hides the regular mode + all-day fields when the habit is linked, since
+// linked habits are always binary "did the activity = done".
+export function updateLinkedHabitFields() {
+  const v = document.getElementById('habit-link-type')?.value || '';
+  ['meditate', 'train', 'deepwork'].forEach(k => {
+    const el = document.getElementById('linked-config-' + k);
+    if (el) el.style.display = v === k ? '' : 'none';
+  });
+  const linked = !!v;
+  // When linked: force binary mode and hide all-day / counter / mode controls.
+  const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
+  const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
+  const counterWrap = document.getElementById('habit-counter-fields');
+  if (modeRow) modeRow.style.display = linked ? 'none' : '';
+  if (allDayRow) allDayRow.style.display = linked ? 'none' : '';
+  if (counterWrap) counterWrap.style.display = linked ? 'none' : counterWrap.style.display;
+  if (linked) {
+    const modeSel = document.getElementById('habit-mode'); if (modeSel) modeSel.value = 'binary';
+    const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
+  }
+}
+
 export function openAddHabit() {
   document.getElementById('m-habit-title').textContent = 'Add Habit';
   document.getElementById('habit-edit-id').value = '';
@@ -214,8 +319,17 @@ export function openAddHabit() {
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
   const upEl = document.getElementById('habit-unit-preset'); if (upEl) upEl.value = '';
   const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = '';
+  // Linked-habit defaults
+  const lt = document.getElementById('habit-link-type'); if (lt) lt.value = '';
+  const lmd = document.getElementById('linked-med-dur'); if (lmd) lmd.value = 10;
+  const lms = document.getElementById('linked-med-sound'); if (lms) lms.value = '';
+  populateLinkedGuidedSelect('');
+  const ldw = document.getElementById('linked-dw-work'); if (ldw) ldw.value = 25;
+  const ldb = document.getElementById('linked-dw-break'); if (ldb) ldb.value = 5;
+  const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = '';
   populateHabitGoalSelect('');
   toggleCounterFields();
+  updateLinkedHabitFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -234,8 +348,18 @@ export function openEditHabit(id) {
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = !!h.allDay;
   const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = h.whyMatters || '';
+  // Linked-habit fields
+  const lt = document.getElementById('habit-link-type'); if (lt) lt.value = h.linkedType || '';
+  const lc = h.linkedConfig || {};
+  const lmd = document.getElementById('linked-med-dur'); if (lmd) lmd.value = lc.duration ?? 10;
+  const lms = document.getElementById('linked-med-sound'); if (lms) lms.value = lc.sound || '';
+  populateLinkedGuidedSelect(lc.guidedScriptId || '');
+  const ldw = document.getElementById('linked-dw-work'); if (ldw) ldw.value = lc.mins ?? 25;
+  const ldb = document.getElementById('linked-dw-break'); if (ldb) ldb.value = lc.breakMins ?? 5;
+  const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
+  updateLinkedHabitFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -278,15 +402,36 @@ export function saveHabit() {
   const goalId = document.getElementById('habit-goal')?.value || null;
   const allDay = !!document.getElementById('habit-allday')?.checked;
   const whyMatters = (document.getElementById('habit-why')?.value || '').trim();
+  const linkedType = document.getElementById('habit-link-type')?.value || null;
+  let linkedConfig = null;
+  if (linkedType === 'meditate') {
+    linkedConfig = {
+      duration: parseInt(document.getElementById('linked-med-dur')?.value) || 10,
+      sound: document.getElementById('linked-med-sound')?.value || '',
+      guidedScriptId: document.getElementById('linked-med-guided')?.value || null,
+    };
+  } else if (linkedType === 'deepwork') {
+    linkedConfig = {
+      mins: parseInt(document.getElementById('linked-dw-work')?.value) || 25,
+      breakMins: parseInt(document.getElementById('linked-dw-break')?.value) || 5,
+      label: (document.getElementById('linked-dw-label')?.value || '').trim(),
+    };
+  } else if (linkedType === 'train') {
+    linkedConfig = {};
+  }
+  // Linked habits are always binary toggles, never counters / all-day.
+  const effectiveMode = linkedType ? 'binary' : (allDay ? 'counter' : mode);
   const data = {
     name,
     block: document.getElementById('habit-block').value,
-    icon: document.getElementById('habit-icon').value || '●',
-    mode: allDay ? 'counter' : mode,
+    icon: document.getElementById('habit-icon').value || (linkedType === 'meditate' ? '🧘' : linkedType === 'train' ? '🏋️' : linkedType === 'deepwork' ? '🧠' : '●'),
+    mode: effectiveMode,
     journalPrompt,
     goalId,
-    allDay,
+    allDay: linkedType ? false : allDay,
     whyMatters,
+    linkedType,
+    linkedConfig,
   };
   if (mode === 'counter') {
     if (target) data.target = target;
@@ -345,5 +490,8 @@ window.toggleHabitBlock = toggleHabitBlock;
 window.renderHabitHeatmap = renderHabitHeatmap;
 window.toggleCounterFields = toggleCounterFields;
 window.toggleAllDayHabit = toggleAllDayHabit;
+window.updateLinkedHabitFields = updateLinkedHabitFields;
+window.openLinkedHabit = openLinkedHabit;
+window.markHabitDoneFromFlow = markHabitDoneFromFlow;
 window.applyUnitPreset = applyUnitPreset;
 window.doneToday = doneToday;
