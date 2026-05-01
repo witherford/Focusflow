@@ -32,13 +32,10 @@ export function renderDash() {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dateLbl = document.getElementById('dash-date-label'); if (dateLbl) dateLbl.textContent = days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
   const greetEl = document.getElementById('dash-greeting'); if (greetEl) greetEl.textContent = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (S.profile.name ? ' ' + S.profile.name : '');
-  // Streak chip lives directly below the greeting so it survives the
-  // stats-grid being toggled off (which is now the default per V1.0.8).
+  // V1.1.3 — overall streak chip removed; per-habit streaks now appear next
+  // to each habit row (more meaningful than a single rolled-up number).
   const streakChipEl = document.getElementById('dash-streak-chip');
-  if (streakChipEl) {
-    const s = calcStreak_global();
-    streakChipEl.innerHTML = s > 0 ? `🔥 <span>${s}-day streak</span>` : '✨ <span>Start your streak today</span>';
-  }
+  if (streakChipEl) streakChipEl.style.display = 'none';
 
   show('stat-grid', isWidgetOn('stats'));
   if (isWidgetOn('stats')) {
@@ -61,7 +58,9 @@ export function renderDash() {
   if (isWidgetOn('heatstrip'))  renderHeatStrip();  else clear('dash-heatstrip');
   if (isWidgetOn('goals'))      renderGoalsDash();  else clear('dash-goals');
   if (isWidgetOn('priorities')) renderPriorities(); else clear('dash-priorities');
-  if (isWidgetOn('badhabits'))  renderBadHabits();  else { const el = document.getElementById('dash-bad-habits'); if (el) { el.innerHTML = ''; el.style.display = 'none'; } }
+  // V1.1.3 — legacy bad-habits widget retired in favour of bad habits living
+  // inside their time-blocks alongside good habits. Keep the container empty.
+  const bhEl = document.getElementById('dash-bad-habits'); if (bhEl) { bhEl.innerHTML = ''; bhEl.style.display = 'none'; }
 }
 
 function renderLevelTile() {
@@ -92,19 +91,32 @@ export function renderUpNext() {
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const block = currentBlock();
   const items = [];
-  S.habits.filter(h => h.block === block && isHabitActiveToday(h) && !habitDoneToday(h)).slice(0, 3).forEach(h => items.push({ kind: 'habit', id: h.id, icon: h.icon || '●', name: h.name }));
+  const bhLog = S.badHabitLog?.[today()] || {};
+  S.habits.filter(h => h.block === block && isHabitActiveToday(h)).filter(h => {
+    if (h.kind === 'bad') return !bhLog[h.id]; // un-logged bad habits show until tapped
+    return !habitDoneToday(h);
+  }).slice(0, 3).forEach(h => {
+    const streak = window.calcStreak?.(h.id) ?? 0;
+    items.push({ kind: h.kind === 'bad' ? 'badhabit' : 'habit', id: h.id, icon: h.icon || (h.kind === 'bad' ? '🚫' : '●'), name: h.name, streak });
+  });
   if (block === 'morning') {
     S.chores.filter(c => c.day === todayDay && !cl[c.id]).slice(0, 2).forEach(c => items.push({ kind: 'chore', id: c.id, icon: '🧹', name: c.name }));
   }
   if (!items.length) { el.innerHTML = ''; return; }
   const blockIcon = { morning: '☀️', afternoon: '🌤', evening: '🌙' }[block];
   el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">${blockIcon} Up next · ${block}</div><div style="font-size:11px;color:var(--text3)">${items.length} to go</div></div>
-    ${items.map(it => `<div class="up-next-row" onclick="dashUpNextClick('${it.kind}','${it.id}')"><div class="tb-check"></div><span style="flex:1">${it.icon} ${it.name}</span><span class="badge badge-violet" style="font-size:10px">${it.kind}</span></div>`).join('')}
+    ${items.map(it => {
+      const sChip = it.streak ? `<span class="dash-row-streak" title="Streak">🔥${it.streak}</span>` : '';
+      const badgeClass = it.kind === 'badhabit' ? 'badge-rose' : it.kind === 'chore' ? 'badge-teal' : 'badge-violet';
+      const badgeText = it.kind === 'badhabit' ? 'bad habit' : it.kind;
+      return `<div class="up-next-row" onclick="dashUpNextClick('${it.kind}','${it.id}')"><div class="tb-check"></div><span style="flex:1">${it.icon} ${it.name}</span>${sChip}<span class="badge ${badgeClass}" style="font-size:10px">${badgeText}</span></div>`;
+    }).join('')}
   </div>`;
 }
 
 export function dashUpNextClick(kind, id) {
   if (kind === 'habit') return toggleHabitDash(id);
+  if (kind === 'badhabit') return openBadHabitLog(id);
   if (kind === 'chore') return toggleChoreDash(id);
 }
 
@@ -219,12 +231,25 @@ export function renderTimeblocks() {
   const log = S.habitLog[today()] || {}, cl = S.choreLog[weekKey()] || {};
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const el = document.getElementById('dash-timeblocks'); if (!el) return;
+  const bhLog = S.badHabitLog?.[today()] || {};
   el.innerHTML = blocks.map(b => {
     const bH = S.habits.filter(h => h.block === b.id && isHabitActiveToday(h));
     const bC = b.id === 'morning' ? S.chores.filter(c => c.day === todayDay) : [];
     const bT = b.id === 'morning' ? S.tasks.filter(t => !t.done && !t.parentId && t.due === today()) : [];
     const items = [
-      ...bH.map(h => `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span><span class="badge badge-violet" style="font-size:10px">habit</span></div>`),
+      ...bH.map(h => {
+        if (h.kind === 'bad') {
+          const v = bhLog[h.id];
+          const checkClass = v === 'avoided' ? 'done' : v === 'indulged' ? 'indulged' : '';
+          const checkChar = v === 'avoided' ? '✓' : v === 'indulged' ? '✕' : '·';
+          const streak = window.calcStreak?.(h.id) ?? 0;
+          const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Avoided streak">🔥${streak}</span>` : '';
+          return `<div class="timeblock-item" onclick="openBadHabitLog('${h.id}')"><div class="tb-check ${checkClass}">${checkChar}</div><span style="flex:1">${h.icon || '🚫'} ${h.name}</span>${streakChip}<span class="badge badge-rose" style="font-size:10px">bad</span></div>`;
+        }
+        const streak = window.calcStreak?.(h.id) ?? 0;
+        const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Streak">🔥${streak}</span>` : '';
+        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${streakChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
+      }),
       ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${cl[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
       ...bT.map(t => `<div class="timeblock-item" onclick="toggleTaskQuick('${t.id}')"><div class="tb-check">✓</div><span style="flex:1">📋 ${t.name}</span><span class="badge badge-${t.priority === 'high' ? 'rose' : t.priority === 'medium' ? 'gold' : 'green'}" style="font-size:10px">${t.priority}</span></div>`)
     ].join('');
@@ -234,12 +259,47 @@ export function renderTimeblocks() {
 
 export function toggleHabitDash(id) {
   const h = S.habits.find(x => x.id === id);
+  if (h?.kind === 'bad') return openBadHabitLog(id);
   // Linked habits jump to their tool with the saved config — same behaviour as
   // tapping them on the Habits page.
   if (h?.linkedType) { window.openLinkedHabit?.(h); return; }
   if (!S.habitLog[today()]) S.habitLog[today()] = {};
   S.habitLog[today()][id] = !S.habitLog[today()][id];
   haptic('medium'); save(); renderDash();
+}
+
+// Bad-habit dashboard log — pop a tiny chooser for "avoided" vs "indulged".
+export function openBadHabitLog(id) {
+  const h = S.habits.find(x => x.id === id); if (!h) return;
+  document.getElementById('m-bhl-title').textContent = h.icon ? `${h.icon} ${h.name}` : h.name;
+  document.getElementById('m-bhl-id').value = id;
+  const td = today();
+  const cur = S.badHabitLog?.[td]?.[id];
+  document.getElementById('m-bhl-current').textContent = cur ? `Today's log: ${cur === 'avoided' ? '✅ avoided' : '❌ indulged'} (tap to overwrite)` : 'No entry yet for today.';
+  const streak = window.calcStreak?.(id) ?? 0;
+  document.getElementById('m-bhl-streak').textContent = streak > 0 ? `🔥 ${streak}-day avoided streak` : 'No avoided streak yet';
+  document.getElementById('m-bhl').style.display = 'flex';
+}
+
+export function logBadHabit(verdict) {
+  const id = document.getElementById('m-bhl-id').value;
+  const h = S.habits.find(x => x.id === id); if (!h) return;
+  if (!S.badHabitLog) S.badHabitLog = {};
+  if (!S.badHabitLog[today()]) S.badHabitLog[today()] = {};
+  const prev = S.badHabitLog[today()][id];
+  S.badHabitLog[today()][id] = verdict;
+  if (prev !== verdict) {
+    if (verdict === 'avoided') {
+      window.awardXP?.('badAvoided');
+      window.toast?.(`✅ Avoided ${h.name} (+${window.XP_TABLE?.badAvoided || 0} XP)`);
+    } else if (verdict === 'indulged') {
+      window.awardXP?.('badIndulged');
+      window.toast?.(`❌ Indulged ${h.name} (${window.XP_TABLE?.badIndulged || 0} XP)`);
+    }
+  }
+  haptic(verdict === 'indulged' ? 'heavy' : 'medium');
+  save(); window.closeModal?.('m-bhl'); renderDash();
+  window.renderHabitsToday?.(); window.renderHabitsAll?.();
 }
 export function toggleChoreDash(id) {
   const c = S.chores.find(x => x.id === id); if (!c) return;
@@ -298,6 +358,8 @@ window.toggleHabitDash = toggleHabitDash;
 window.toggleChoreDash = toggleChoreDash;
 window.toggleTaskQuick = toggleTaskQuick;
 window.openBH = openBH;
+window.openBadHabitLog = openBadHabitLog;
+window.logBadHabit = logBadHabit;
 window.setBhType = setBhType;
 window.saveBH = saveBH;
 window.calcStreak_global = calcStreak_global;

@@ -446,6 +446,41 @@ function populateLinkedGuidedSelect(selectedId) {
 // Show / hide the per-type config block based on the dropdown choice. Also
 // hides the regular mode + all-day fields when the habit is linked, since
 // linked habits are always binary "did the activity = done".
+// Show / hide fields based on whether the habit is good or bad. Bad habits
+// don't support linked tools, counters, all-day, or streak goals (their
+// streak is implicit from indulged-day breaks).
+export function updateHabitKindFields() {
+  const isBad = (document.getElementById('habit-kind')?.value === 'bad');
+  const linkRow = document.getElementById('habit-link-type')?.closest('.form-row');
+  const linkInfo = document.getElementById('habit-link-type')?.parentElement?.nextElementSibling;
+  const badInfo = document.getElementById('habit-kind-bad-info');
+  if (linkRow) linkRow.style.display = isBad ? 'none' : '';
+  if (linkInfo && linkInfo.style) linkInfo.style.display = isBad ? 'none' : '';
+  if (badInfo) badInfo.style.display = isBad ? '' : 'none';
+  // Hide all linked-config blocks when bad habit
+  if (isBad) {
+    ['meditate','train','deepwork','sleep','journal','weight'].forEach(k => {
+      const el = document.getElementById('linked-config-' + k); if (el) el.style.display = 'none';
+    });
+    const lt = document.getElementById('habit-link-type'); if (lt) lt.value = '';
+    // Force binary, hide counter/all-day
+    const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
+    const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
+    const counterWrap = document.getElementById('habit-counter-fields');
+    if (modeRow) modeRow.style.display = 'none';
+    if (allDayRow) allDayRow.style.display = 'none';
+    if (counterWrap) counterWrap.style.display = 'none';
+    const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
+  } else {
+    // Restore visibility (linked-fields handler will re-evaluate too)
+    const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
+    const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
+    if (modeRow) modeRow.style.display = '';
+    if (allDayRow) allDayRow.style.display = '';
+    updateLinkedHabitFields();
+  }
+}
+
 export function updateLinkedHabitFields() {
   const v = document.getElementById('habit-link-type')?.value || '';
   ['meditate', 'train', 'deepwork', 'sleep', 'journal', 'weight'].forEach(k => {
@@ -471,6 +506,7 @@ export function openAddHabit() {
   document.getElementById('habit-edit-id').value = '';
   document.getElementById('habit-name').value = '';
   document.getElementById('habit-icon').value = '';
+  const kindSel = document.getElementById('habit-kind'); if (kindSel) kindSel.value = 'good';
   document.getElementById('habit-block').value = 'morning';
   const modeSel = document.getElementById('habit-mode'); if (modeSel) modeSel.value = 'binary';
   ['habit-target','habit-unit','habit-step'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -497,6 +533,7 @@ export function openAddHabit() {
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
+  updateHabitKindFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -506,6 +543,7 @@ export function openEditHabit(id) {
   document.getElementById('habit-edit-id').value = id;
   document.getElementById('habit-name').value = h.name;
   document.getElementById('habit-icon').value = h.icon || '';
+  const kindSel = document.getElementById('habit-kind'); if (kindSel) kindSel.value = h.kind === 'bad' ? 'bad' : 'good';
   document.getElementById('habit-block').value = h.block || 'morning';
   const modeSel = document.getElementById('habit-mode'); if (modeSel) modeSel.value = h.mode || 'binary';
   const targetEl = document.getElementById('habit-target'); if (targetEl) targetEl.value = h.target ?? '';
@@ -534,6 +572,7 @@ export function openEditHabit(id) {
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
+  updateHabitKindFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -603,14 +642,16 @@ export function saveHabit() {
   // Linked habits are always binary toggles, never counters / all-day.
   const effectiveMode = linkedType ? 'binary' : (allDay ? 'counter' : mode);
   const linkedIconMap = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️' };
+  const kind = document.getElementById('habit-kind')?.value === 'bad' ? 'bad' : 'good';
   const data = {
     name,
+    kind,
     block: document.getElementById('habit-block').value,
-    icon: document.getElementById('habit-icon').value || (linkedIconMap[linkedType] || '●'),
-    mode: effectiveMode,
+    icon: document.getElementById('habit-icon').value || (kind === 'bad' ? '🚫' : (linkedIconMap[linkedType] || '●')),
+    mode: kind === 'bad' ? 'binary' : effectiveMode,
     journalPrompt,
     goalId,
-    allDay: linkedType ? false : allDay,
+    allDay: (linkedType || kind === 'bad') ? false : allDay,
     whyMatters,
     linkedType,
     linkedConfig,
@@ -643,10 +684,25 @@ export function deleteHabit(id) {
 }
 
 // Streak = consecutive days from today backward where the habit was "met" (with auto-freeze).
+// Bad habits use a different rule: streak = consecutive days back without an "indulged" entry.
 export function calcStreak(id) {
   const h = S.habits.find(x => x.id === id); if (!h) return 0;
+  if (h.kind === 'bad') return calcBadStreak(h);
   const { streak } = computeStreakWithFreeze(h);
   h.tier = tierFor(streak, h.tierBase || DEFAULT_TIERS);
+  return streak;
+}
+
+export function calcBadStreak(h) {
+  const log = S.badHabitLog || {};
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+    const v = log[k]?.[h.id];
+    if (v === 'indulged') break;
+    if (v === 'avoided') streak++;
+    // Unmarked days neither break nor count toward the streak.
+  }
   return streak;
 }
 
@@ -676,6 +732,8 @@ window.renderHabitHeatmap = renderHabitHeatmap;
 window.toggleCounterFields = toggleCounterFields;
 window.toggleAllDayHabit = toggleAllDayHabit;
 window.updateLinkedHabitFields = updateLinkedHabitFields;
+window.updateHabitKindFields = updateHabitKindFields;
+window.calcBadStreak = calcBadStreak;
 window.updateHabitGoalFields = updateHabitGoalFields;
 window.openLinkedHabit = openLinkedHabit;
 window.markHabitDoneFromFlow = markHabitDoneFromFlow;

@@ -30,12 +30,14 @@ export const XP_TABLE = {
   streakMilestone: 50,   // when hitting a tier
   weightLog: 5,
   checkin: 3,
+  badAvoided: 8,          // bad-habit avoided for the day
+  badIndulged: -15,       // negative — penalty deducted on indulgence
 };
 
 export function award(kind, n = 1) {
   const g = ensure();
   const unit = XP_TABLE[kind] || 0;
-  g.xp += unit * n;
+  g.xp = Math.max(0, g.xp + unit * n);
   g.lastAward = { kind, at: Date.now(), amount: unit * n };
   const lv = levelFromXp(g.xp);
   const prev = g.level || 1;
@@ -43,6 +45,8 @@ export function award(kind, n = 1) {
   save();
   if (lv.level > prev) {
     window.toast?.(`🎉 Level up! Level ${lv.level}`);
+  } else if (lv.level < prev) {
+    window.toast?.(`Level dropped to ${lv.level}`);
   }
   checkBadges();
   return g;
@@ -132,14 +136,72 @@ export function renderLevelCard() {
   </div>`;
 }
 
+// Categorize each badge into a group and pull a numeric "rank" out of its
+// id/name so we can sort low → high inside each group.
+function badgeCategory(b) {
+  const id = b.id;
+  if (id.startsWith('level-')) return { key: 'level', label: '⭐ Levels' };
+  if (id.startsWith('streak-')) return { key: 'streak', label: '🔥 Habit streaks' };
+  if (/sessions$/.test(id) || id.endsWith('-sessions')) return { key: 'focus', label: '🧠 Focus sessions' };
+  if (/(meds|meditation)/.test(id)) return { key: 'meditation', label: '🧘 Meditation' };
+  if (/journal/.test(id)) return { key: 'journal', label: '📓 Journal' };
+  if (/(fit|workout)/.test(id) && id !== 'first-fitness') return { key: 'fit', label: '🏋️ Training' };
+  if (id === 'first-fitness') return { key: 'fit', label: '🏋️ Training' };
+  if (/weight/.test(id)) return { key: 'weight', label: '⚖️ Weight' };
+  if (/sleep/.test(id)) return { key: 'sleep', label: '😴 Sleep' };
+  if (/task/.test(id)) return { key: 'tasks', label: '📋 Tasks' };
+  if (/goal/.test(id)) return { key: 'goals', label: '🎯 Goals' };
+  if (/habit|all-day|linked|routine/.test(id)) return { key: 'habits', label: '✅ Habits' };
+  return { key: 'misc', label: '✨ Other' };
+}
+
+const CATEGORY_ORDER = ['level', 'habits', 'streak', 'tasks', 'goals', 'focus', 'meditation', 'fit', 'journal', 'weight', 'sleep', 'misc'];
+
+function badgeRank(b) {
+  // Pull the largest number out of id+name for ordering. Falls back to 0.
+  const m = (b.id + ' ' + b.name).match(/(\d+)/g);
+  if (!m) return 0;
+  return Math.max(...m.map(n => parseInt(n)));
+}
+
 export function renderBadges() {
   const el = document.getElementById('badges-grid'); if (!el) return;
   const g = ensure();
-  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">🏅 Badges</div><div style="font-size:11px;color:var(--text3)">${Object.keys(g.badges).length}/${BADGES.length}</div></div>
-    <div class="badge-grid">${BADGES.map(b => {
+  // Group badges by category.
+  const groups = {};
+  for (const b of BADGES) {
+    const cat = badgeCategory(b);
+    if (!groups[cat.key]) groups[cat.key] = { label: cat.label, items: [] };
+    groups[cat.key].items.push(b);
+  }
+  // Sort items within each group by numeric rank ascending, then name.
+  Object.values(groups).forEach(g2 => {
+    g2.items.sort((a, b) => {
+      const ra = badgeRank(a), rb = badgeRank(b);
+      if (ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name);
+    });
+  });
+  // Order groups per CATEGORY_ORDER.
+  const orderedKeys = CATEGORY_ORDER.filter(k => groups[k]);
+  // Append any unforeseen keys.
+  Object.keys(groups).forEach(k => { if (!orderedKeys.includes(k)) orderedKeys.push(k); });
+
+  const groupsHtml = orderedKeys.map(k => {
+    const grp = groups[k];
+    const unlockedInGrp = grp.items.filter(b => g.badges[b.id]).length;
+    const tiles = grp.items.map(b => {
       const on = !!g.badges[b.id];
       return `<div class="badge-tile ${on ? 'unlocked' : 'locked'}" title="${on ? 'Unlocked' : 'Locked'}"><div class="b-icon">${b.icon}</div><div>${b.name}</div></div>`;
-    }).join('')}</div>
+    }).join('');
+    return `<div class="badge-cat">
+      <div class="badge-cat-head"><span>${grp.label}</span><span class="badge-cat-count">${unlockedInGrp}/${grp.items.length}</span></div>
+      <div class="badge-grid">${tiles}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">🏅 Badges</div><div style="font-size:11px;color:var(--text3)">${Object.keys(g.badges).length}/${BADGES.length}</div></div>
+    ${groupsHtml}
   </div>`;
 }
 

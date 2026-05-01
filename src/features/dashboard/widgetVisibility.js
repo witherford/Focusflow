@@ -9,8 +9,7 @@ export const WIDGETS = [
   { id: 'allday',    label: 'All-day habits',      desc: 'Tap-to-increment habit tiles',            group: 'on' },
   { id: 'upnext',    label: 'Up next',             desc: 'Habits/chores due in current block',      group: 'on' },
   { id: 'tasksdue',  label: 'Tasks due today',     desc: 'Upcoming + overdue tasks',                group: 'on' },
-  { id: 'badhabits', label: 'Bad-habit tracker',   desc: 'Negative habits with avoid/indulge log',  group: 'on' },
-  { id: 'timeblocks',label: 'Time blocks',         desc: 'Morning / afternoon / evening lists',     group: 'on' },
+  { id: 'timeblocks',label: 'Time blocks',         desc: 'Morning / afternoon / evening lists (good + bad habits)', group: 'on' },
   // Insights moved off the dashboard. Tick the box to put any of them back.
   { id: 'stats',     label: 'Stats grid',          desc: 'Habits %, tasks done, focus hrs, streak — also on Insights', group: 'insights', off: true },
   { id: 'heatstrip', label: 'Heat strip',          desc: 'Last 30 days of habit density — also on Insights',           group: 'insights', off: true },

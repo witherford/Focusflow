@@ -157,6 +157,44 @@ window.renderBadHabits = renderBadHabits;
 // ── Init ────────────────────────────────────────────────────────────────────
 
 await load();
+
+// V1.1.3 — one-shot migration: convert legacy profile.negHabits / negCustom
+// into actual habits with kind:'bad' so they show up alongside good habits in
+// the time-blocks. Stamp a flag so it never runs twice.
+(function migrateBadHabitsV113() {
+  try {
+    if (!S.settings) S.settings = {};
+    if (S.settings.badHabitsMigratedV113) return;
+    const negList = [
+      ...(S.profile?.negHabits || []),
+      ...((S.profile?.negCustom || '').split('\n').map(s => s.trim()).filter(Boolean)),
+    ];
+    if (!S.badHabitLog) S.badHabitLog = {};
+    const existing = new Set(S.habits.filter(h => h.kind === 'bad').map(h => h.name.toLowerCase()));
+    const created = [];
+    for (const name of negList) {
+      if (existing.has(name.toLowerCase())) continue;
+      const id = 'bad-' + Math.random().toString(36).slice(2, 9);
+      S.habits.push({ id, name, kind: 'bad', block: 'allday', icon: '🚫', mode: 'binary' });
+      // Carry across legacy journal indulged/avoided history into badHabitLog.
+      (S.journal || []).filter(j => j.habitId === name && (j.type === 'avoided' || j.type === 'indulged')).forEach(j => {
+        const day = (j.datetime || '').slice(0, 10); if (!day) return;
+        if (!S.badHabitLog[day]) S.badHabitLog[day] = {};
+        // Last write wins per day.
+        S.badHabitLog[day][id] = j.type;
+      });
+      created.push(name);
+    }
+    S.settings.badHabitsMigratedV113 = true;
+    if (created.length) {
+      try { save(); } catch {}
+      console.log('[ff] migrated bad habits →', created);
+    } else {
+      try { save(); } catch {}
+    }
+  } catch (e) { console.warn('bad-habit migration failed', e); }
+})();
+
 initRouter();
 initModals();
 initTheme();

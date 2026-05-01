@@ -17,7 +17,7 @@ export function defaultState() {
   return {
     meta: { schemaVersion: SCHEMA_VERSION, createdAt: new Date().toISOString(), lastMigrationAt: null },
     profile: { name:'', weight:'', wake:'06:30', bed:'22:30', sleepNow:7, sleepTarget:8, trainRoutines:[], posHabits:[], negHabits:[], posCustom:'', negCustom:'', goals:'', diet:'balanced', allergies:'', meals:3 },
-    habits: [], habitLog: {}, chores: [], choreLog: {}, choreDayOpen: {},
+    habits: [], habitLog: {}, badHabitLog: {}, chores: [], choreLog: {}, choreDayOpen: {},
     projects: [], tasks: [], goals: [],
     deepwork: { target:4, sessions:[], presets:[
       {id:'p1',label:'Pomodoro',mins:25,icon:'🍅'},

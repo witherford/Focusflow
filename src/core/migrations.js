@@ -12,6 +12,7 @@ export function migrate_1_to_2(v1) {
     profile: { ...base.profile, ...(src.profile || {}) },
     habits: (src.habits || []).map(h => ({ mode: 'binary', journalPrompt: true, ...h })),
     habitLog: src.habitLog && typeof src.habitLog === 'object' ? src.habitLog : {},
+    badHabitLog: src.badHabitLog && typeof src.badHabitLog === 'object' ? src.badHabitLog : {},
     chores: Array.isArray(src.chores) ? src.chores : [],
     choreLog: src.choreLog && typeof src.choreLog === 'object' ? src.choreLog : {},
     choreDayOpen: src.choreDayOpen || {},

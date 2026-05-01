@@ -267,6 +267,7 @@
       </select></div>
       <div id="ins-sleep-log"></div>
     </div>
+    <div class="card" id="ins-bad-habits-card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">🚫 Bad-habit stats</div></div><div id="ins-bad-habits"></div></div>
     <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
     <div id="badges-grid" style="margin-bottom:14px"></div>
   </div>
@@ -1110,6 +1111,12 @@ Review with team | low | | first pass only"></textarea></div>
   <div class="modal-title" id="m-habit-title">Add Habit</div>
   <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
 
+  <div class="form-row"><label>Kind</label><select id="habit-kind" onchange="updateHabitKindFields()">
+    <option value="good">✅ Good habit (build it up)</option>
+    <option value="bad">🚫 Bad habit (avoid it)</option>
+  </select></div>
+  <div id="habit-kind-bad-info" style="display:none;font-size:11px;color:var(--text3);margin:-6px 0 8px">Tap a bad habit on the dashboard each day to mark it <b>avoided</b> (+XP, streak +1) or <b>indulged</b> (-XP, streak resets).</div>
+
   <div class="form-row"><label>🔗 Create a linked habit</label><select id="habit-link-type" onchange="updateLinkedHabitFields()">
     <option value="">— None (regular habit) —</option>
     <option value="meditate">🧘 Meditate</option>
@@ -1312,6 +1319,21 @@ Review with team | low | | first pass only"></textarea></div>
   </div>
 </div></div>
 
+<!-- Bad habit dashboard log — quick avoided / indulged chooser. -->
+<div class="modal-overlay" id="m-bhl" style="display:none"><div class="modal" style="max-width:380px">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-bhl-title">Bad habit</div>
+  <div id="m-bhl-current" style="font-size:12px;color:var(--text3);margin-bottom:6px"></div>
+  <div id="m-bhl-streak" style="font-size:13px;color:var(--gold);font-weight:600;margin-bottom:14px"></div>
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-success" style="flex:1;font-size:14px;padding:14px" onclick="logBadHabit('avoided')">✅ Avoided</button>
+    <button class="btn btn-danger" style="flex:1;font-size:14px;padding:14px" onclick="logBadHabit('indulged')">❌ Indulged</button>
+  </div>
+  <input type="hidden" id="m-bhl-id">
+  <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5">Avoided +XP and continues your streak · indulged resets streak and deducts XP.</div>
+  <div style="display:flex;gap:8px;margin-top:14px"><button class="btn" style="flex:1" onclick="closeModal('m-bhl')">Cancel</button></div>
+</div></div>
+
 <div class="modal-overlay" id="m-bh" style="display:none"><div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="m-bh-title">Log Habit</div>
@@ -1354,8 +1376,9 @@ Review with team | low | | first pass only"></textarea></div>
   <div class="form-row">
     <label>Type</label>
     <select id="qc-type" onchange="qcUpdateFields()">
-      <option value="task">📋 Task</option>
-      <option value="habit-tick">✅ Tick a habit</option>
+      <option value="task">📋 Create a task</option>
+      <option value="habit">✅ Create a habit</option>
+      <option value="habit-tick">☑️ Tick an existing habit</option>
       <option value="journal">📓 Journal note</option>
       <option value="shop">🛒 Shopping item</option>
     </select>
@@ -1367,8 +1390,29 @@ Review with team | low | | first pass only"></textarea></div>
       <div class="form-row"><label>Due</label><input type="date" id="qc-task-due"></div>
     </div>
   </div>
-  <div id="qc-habit-fields" style="display:none">
+  <div id="qc-habit-tick-fields" style="display:none">
     <div class="form-row"><label>Habit</label><select id="qc-habit-sel"></select></div>
+  </div>
+  <div id="qc-habit-fields" style="display:none">
+    <div class="form-row"><label>Habit name</label><input type="text" id="qc-habit-name" placeholder="e.g. Drink water" autocapitalize="sentences"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Kind</label><select id="qc-habit-kind">
+        <option value="good">✅ Good (build)</option>
+        <option value="bad">🚫 Bad (avoid)</option>
+      </select></div>
+      <div class="form-row"><label>Time block</label><select id="qc-habit-block">
+        <option value="morning">☀️ Morning</option>
+        <option value="afternoon">🌤 Afternoon</option>
+        <option value="evening">🌙 Evening</option>
+        <option value="allday">⏳ All day</option>
+      </select></div>
+      <div class="form-row"><label>Icon (emoji)</label><input type="text" id="qc-habit-icon" maxlength="2" placeholder="●"></div>
+      <div class="form-row"><label>Mode</label><select id="qc-habit-mode">
+        <option value="binary">Binary (done/not)</option>
+        <option value="counter">Counter (N per day)</option>
+      </select></div>
+    </div>
+    <div class="form-row"><label style="font-size:11px;color:var(--text3)">For full options (linked tools, streak goals, weekday picker), use the Habits page → Add habit.</label></div>
   </div>
   <div id="qc-journal-fields" style="display:none">
     <div class="form-row"><label>Entry</label><textarea id="qc-journal-text" rows="4" placeholder="A quick note…"></textarea></div>

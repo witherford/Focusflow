@@ -89,6 +89,7 @@ function renderInsightsTowardGoals() {
 export function renderInsightsSleepLog() {
   const el = document.getElementById('ins-sleep-log'); if (!el) return;
   const log = (S.sleepLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const target = parseFloat(S.profile?.sleepTarget) || 8;
   if (!log.length) { el.innerHTML = '<div class="empty-state"><div class="es-icon">😴</div><div class="es-sub">No sleep data yet — log a night on the Sleep page.</div></div>'; return; }
   const rangeSel = document.getElementById('ins-sleep-range');
   const range = rangeSel?.value || '7';
@@ -102,32 +103,108 @@ export function renderInsightsSleepLog() {
   const hours = filtered.map(s => s.hours || 0);
   const total = hours.reduce((a, b) => a + b, 0);
   const avg = total / hours.length;
-  const max = Math.max(10, ...hours);
   const min = Math.min(...hours);
-  // Bar chart (or thin line for very long ranges)
-  const barWidth = filtered.length > 60 ? 1 : Math.max(2, Math.floor(280 / filtered.length));
-  const w = filtered.length * (barWidth + 1);
-  const h = 110;
-  const bars = filtered.map((s, i) => {
+  const max = Math.max(...hours);
+  const onTarget = hours.filter(h => h >= target).length;
+  const targetPct = Math.round(onTarget / hours.length * 100);
+
+  // Display newest first for readability.
+  const rows = filtered.slice().reverse();
+  // Bar scale — anchor to max(target, observed max) so the target line always
+  // fits within the bar track.
+  const scaleMax = Math.max(target + 1, max + 0.5, 9);
+
+  // Use a CSS grid of one row per night. Each row: date + day-of-week,
+  // hour value, horizontal bar with target marker, quality (if any),
+  // and a delta from target.
+  const rowsHtml = rows.map(s => {
     const v = s.hours || 0;
-    const bh = Math.max(1, (v / max) * h);
-    const colour = v >= 8 ? 'var(--green)' : v >= 6.5 ? 'var(--teal)' : v >= 5 ? 'var(--gold)' : 'var(--rose)';
-    return `<rect x="${i * (barWidth + 1)}" y="${h - bh}" width="${barWidth}" height="${bh}" fill="${colour}" rx="1"><title>${s.date}: ${v}h${s.quality ? ' · q' + s.quality : ''}</title></rect>`;
+    const dt = new Date(s.date + 'T12:00:00');
+    const dow = dt.toLocaleDateString('en-GB', { weekday: 'short' });
+    const dStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const pct = Math.max(2, (v / scaleMax) * 100);
+    const targetLeft = (target / scaleMax) * 100;
+    const colour = v >= target ? 'var(--green)' : v >= target - 1 ? 'var(--teal)' : v >= target - 2.5 ? 'var(--gold)' : 'var(--rose)';
+    const delta = v - target;
+    const deltaLbl = (delta >= 0 ? '+' : '') + delta.toFixed(1) + 'h';
+    const deltaCol = delta >= 0 ? 'var(--green)' : 'var(--rose)';
+    const q = s.quality ? `<span class="sleep-q" title="Quality">${'★'.repeat(s.quality)}<span style="opacity:.3">${'★'.repeat(5 - s.quality)}</span></span>` : '';
+    return `<div class="sleep-row">
+      <div class="sleep-date"><div class="sleep-dow">${dow}</div><div class="sleep-dstr">${dStr}</div></div>
+      <div class="sleep-hours">${v.toFixed(1)}h</div>
+      <div class="sleep-bar-wrap" title="${v}h logged · target ${target}h">
+        <div class="sleep-bar-track">
+          <div class="sleep-bar-fill" style="width:${pct}%;background:${colour}"></div>
+          <div class="sleep-bar-target" style="left:${targetLeft}%" title="Target ${target}h"></div>
+        </div>
+      </div>
+      <div class="sleep-delta" style="color:${deltaCol}">${deltaLbl}</div>
+      ${q ? `<div class="sleep-q-cell">${q}</div>` : '<div></div>'}
+    </div>`;
   }).join('');
-  // 8h reference line
-  const refY = h - (8 / max) * h;
+
   el.innerHTML = `
-    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
       <span><strong style="color:var(--text)">${avg.toFixed(1)}h</strong> <span style="color:var(--text3)">avg</span></span>
-      <span><strong style="color:var(--text)">${total.toFixed(1)}h</strong> <span style="color:var(--text3)">total · ${filtered.length} night${filtered.length === 1 ? '' : 's'}</span></span>
-      <span><strong style="color:var(--text)">${min}–${max.toFixed(1)}h</strong> <span style="color:var(--text3)">range</span></span>
+      <span><strong style="color:var(--text)">${target}h</strong> <span style="color:var(--text3)">target</span></span>
+      <span><strong style="color:var(--green)">${onTarget}/${hours.length}</strong> <span style="color:var(--text3)">nights at target (${targetPct}%)</span></span>
+      <span><strong style="color:var(--text)">${min.toFixed(1)}–${max.toFixed(1)}h</strong> <span style="color:var(--text3)">range</span></span>
     </div>
-    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px">
-      <line x1="0" x2="${w}" y1="${refY}" y2="${refY}" stroke="var(--teal)" stroke-dasharray="3 3" stroke-width="0.6" opacity="0.6"/>
-      ${bars}
-    </svg>
-    <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">teal dashed = 8h target</div>
+    <div class="sleep-grid">${rowsHtml}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;vertical-align:middle"></span> at/above target</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px;vertical-align:middle"></span> within 1h</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--gold);border-radius:2px;vertical-align:middle"></span> 1–2.5h short</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--rose);border-radius:2px;vertical-align:middle"></span> &gt;2.5h short</span>
+      <span><span style="display:inline-block;width:2px;height:10px;background:var(--text);vertical-align:middle"></span> target marker</span>
+    </div>
   `;
+}
+
+// V1.1.3 — bad-habit stats card on Insights.
+export function renderInsightsBadHabits() {
+  const el = document.getElementById('ins-bad-habits'); if (!el) return;
+  const card = document.getElementById('ins-bad-habits-card');
+  const bads = (S.habits || []).filter(h => h.kind === 'bad');
+  if (!bads.length) {
+    if (card) card.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  if (card) card.style.display = '';
+  const log = S.badHabitLog || {};
+  // Build a 30-day window
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    days.push(new Date(Date.now() - i * 864e5).toISOString().split('T')[0]);
+  }
+  const rows = bads.map(h => {
+    let avoided = 0, indulged = 0;
+    days.forEach(d => {
+      const v = log[d]?.[h.id]; if (v === 'avoided') avoided++; else if (v === 'indulged') indulged++;
+    });
+    const logged = avoided + indulged;
+    const cleanRate = logged ? Math.round(avoided / logged * 100) : 0;
+    const streak = window.calcBadStreak ? window.calcBadStreak(h) : 0;
+    // Strip of 30 mini cells
+    const strip = days.map(d => {
+      const v = log[d]?.[h.id];
+      const c = v === 'avoided' ? 'var(--green)' : v === 'indulged' ? 'var(--rose)' : 'var(--bg3)';
+      return `<span class="bh-cell" style="background:${c}" title="${d}: ${v || '—'}"></span>`;
+    }).join('');
+    const rateColour = cleanRate >= 80 ? 'var(--green)' : cleanRate >= 50 ? 'var(--teal)' : 'var(--rose)';
+    return `<div class="bh-stat-row">
+      <div class="bh-stat-head"><span class="bh-stat-name">${h.icon || '🚫'} ${h.name}</span>${streak > 0 ? `<span class="bh-stat-streak">🔥 ${streak}d</span>` : ''}</div>
+      <div class="bh-stat-strip" title="Last 30 days">${strip}</div>
+      <div class="bh-stat-meta">
+        <span><strong style="color:var(--green)">${avoided}</strong> avoided</span>
+        <span><strong style="color:var(--rose)">${indulged}</strong> indulged</span>
+        <span style="color:${rateColour}"><strong>${cleanRate}%</strong> clean</span>
+        <span style="color:var(--text3)">${logged}/30 days logged</span>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = rows + '<div style="font-size:10px;color:var(--text3);margin-top:8px">Last 30 days · green = avoided · red = indulged · grey = unlogged</div>';
 }
 
 export function renderInsights() {
@@ -138,6 +215,7 @@ export function renderInsights() {
   renderInsightsPriorities();
   renderInsightsTowardGoals();
   renderInsightsSleepLog();
+  renderInsightsBadHabits();
   const sum = weekSummary();
   setText('ins-hab-week', sum.habits.pct + '%');
   setText('ins-focus-week', (sum.dwMin / 60).toFixed(1) + 'h');
@@ -223,3 +301,4 @@ export async function runWeeklyReview() {
 
 window.renderInsights = renderInsights;
 window.runWeeklyReview = runWeeklyReview;
+window.renderInsightsBadHabits = renderInsightsBadHabits;

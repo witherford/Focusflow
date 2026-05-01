@@ -52,6 +52,7 @@ function extractCore(state) {
     bodyMeasurements: state.bodyMeasurements || [],
     sleepLog: state.sleepLog || [],
     training: state.training || null,
+    badHabitLog: state.badHabitLog || {},
   };
 }
 
@@ -60,6 +61,7 @@ function mergeCore(core) {
     meta: core.meta,
     profile: core.profile,
     habits: core.habits,
+    badHabitLog: core.badHabitLog || {},
     chores: core.chores,
     choreDayOpen: core.choreDayOpen,
     projects: core.projects,
