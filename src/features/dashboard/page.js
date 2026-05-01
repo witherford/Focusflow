@@ -49,7 +49,6 @@ export function renderDash() {
   if (isWidgetOn('checkin'))    renderCheckin();    else clear('dash-checkin');
   if (isWidgetOn('timeblocks')) renderTimeblocks(); else clear('dash-timeblocks');
   if (isWidgetOn('allday'))     renderAllDay();     else clear('dash-allday');
-  if (isWidgetOn('quickstart')) renderQuickStart(); else clear('dash-quickstart');
   if (isWidgetOn('tasksdue'))   renderTasksDue();   else clear('dash-tasks-due');
   if (isWidgetOn('heatstrip'))  renderHeatStrip();  else clear('dash-heatstrip');
   if (isWidgetOn('goals'))      renderGoalsDash();  else clear('dash-goals');

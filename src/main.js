@@ -95,6 +95,7 @@ import './core/cloudSync.js';
 import './features/settings/cloudSyncUI.js';
 import { applyFeatureVisibility } from './features/settings/featureToggles.js';
 import { startIconNormalizer } from './ui/icons.js';
+import { renderBottomNav } from './ui/bottomNav.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -168,6 +169,7 @@ renderProfile();
 applyAIVis();
 checkBadges();
 applyFeatureVisibility();
+renderBottomNav();
 startIconNormalizer();
 startOnboarding();
 

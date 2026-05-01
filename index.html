@@ -38,7 +38,7 @@
 
   <div class="nav-section">Overview</div>
   <nav id="sidenav">
-    <div class="nav-item active" data-page="dashboard"><span class="nav-emoji">🏠</span> Dashboard</div>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-emoji">📊</span> Dashboard</div>
     <div class="nav-item" data-page="habits"><span class="nav-emoji">✅</span> Habits</div>
     <div class="nav-item" data-page="chores"><span class="nav-emoji">🧹</span> Chores</div>
     <div class="nav-section">Work</div>
@@ -94,7 +94,6 @@
     <div id="dash-checkin" style="margin-bottom:14px"></div>
     <div id="dash-timeblocks" style="margin-bottom:14px"></div>
     <div id="dash-allday" style="margin-bottom:14px"></div>
-    <div id="dash-quickstart" style="margin-bottom:14px"></div>
     <div id="dash-tasks-due" style="margin-bottom:14px"></div>
     <div id="dash-heatstrip" style="margin-bottom:14px"></div>
     <div id="dash-goals" style="margin-bottom:14px"></div>
@@ -125,7 +124,7 @@
     </div>
   </div>
   <div id="h-today" class="tab-content section">
-    <div id="h-morning"></div><div id="h-afternoon"></div><div id="h-evening"></div>
+    <div id="h-morning"></div><div id="h-afternoon"></div><div id="h-evening"></div><div id="h-allday"></div>
   </div>
   <div id="h-all" class="tab-content section" style="display:none"><div id="h-all-list"></div></div>
   <div id="h-heatmap" class="tab-content section" style="display:none">
@@ -224,6 +223,19 @@
   </div>
   <div style="padding:0 20px">
     <div id="level-card"></div>
+
+    <!-- Today (moved from the dashboard) -->
+    <div class="stat-grid" id="ins-today-stat-grid" style="margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-today-habits">0%</div><div class="stat-label">Habits today</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="ins-today-tasks">0</div><div class="stat-label">Tasks done</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-today-focus">0h</div><div class="stat-label">Focus today</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="ins-today-streak">0</div><div class="stat-label">Streak</div></div>
+    </div>
+    <div id="ins-heatstrip" style="margin-bottom:14px"></div>
+    <div id="ins-priorities" style="margin-bottom:14px"></div>
+    <div id="ins-toward-goals" style="margin-bottom:14px"></div>
+
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:6px 0 8px">Trends · 7 days</div>
     <div class="stat-grid" style="margin-bottom:14px">
       <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-hab-week">0%</div><div class="stat-label">Habits · 7d</div></div>
       <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-focus-week">0h</div><div class="stat-label">Focus · 7d</div></div>
@@ -866,8 +878,13 @@
     </div>
 
     <div class="card" style="margin-bottom:14px">
-      <div class="card-header"><div class="card-title">🏠 Dashboard widgets</div><div style="font-size:11px;color:var(--text3)">show / hide cards on the home screen</div></div>
+      <div class="card-header"><div class="card-title">📊 Dashboard widgets</div><div style="font-size:11px;color:var(--text3)">show / hide cards on the dashboard</div></div>
       <div id="widget-toggles" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">📱 Bottom nav shortcuts</div><div style="font-size:11px;color:var(--text3)">6 slots · Dashboard locked</div></div>
+      <div id="shortcut-chooser"></div>
     </div>
 
     <div class="card" style="margin-bottom:14px">
@@ -928,12 +945,13 @@
 <!-- ══ Mobile Nav ══ -->
 <nav class="mob-nav">
   <div class="mob-nav-inner" id="mobnav">
-    <div class="mob-nav-item active" data-page="dashboard"><div class="mob-icon">🏠</div>Home</div>
+    <!-- Populated by ui/bottomNav.js from S.settings.bottomShortcuts. Dashboard slot is locked. -->
+    <div class="mob-nav-item active" data-page="dashboard"><div class="mob-icon">📊</div>Dashboard</div>
     <div class="mob-nav-item" data-page="habits"><div class="mob-icon">✅</div>Habits</div>
     <div class="mob-nav-item" data-page="deepwork"><div class="mob-icon">🧠</div>Focus</div>
     <div class="mob-nav-item" data-page="meditation"><div class="mob-icon">🧘</div>Meditate</div>
-    <div class="mob-nav-item" data-page="projects"><div class="mob-icon">📁</div>Work</div>
-    <div class="mob-nav-item" data-page="profile"><div class="mob-icon">👤</div>Profile</div>
+    <div class="mob-nav-item" data-page="projects"><div class="mob-icon">📁</div>Projects</div>
+    <div class="mob-nav-item" data-page="insights"><div class="mob-icon">📈</div>Insights</div>
   </div>
 </nav>
 
@@ -1125,6 +1143,15 @@ Review with team | low | | first pass only"></textarea></div>
   </div>
   <div class="form-row"><label>Link to goal (optional)</label><select id="habit-goal"><option value="">— none —</option></select></div>
   <div class="form-row"><label>Why this matters (optional)</label><textarea id="habit-why" rows="2" placeholder="The reason behind the habit — read this when motivation dips"></textarea></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Streak goal</label><select id="habit-goal-mode" onchange="updateHabitGoalFields()">
+      <option value="">— None —</option>
+      <option value="number">Specific days</option>
+      <option value="auto">Auto-incremental</option>
+    </select></div>
+    <div class="form-row" id="habit-goal-num-wrap" style="display:none"><label>Goal (days)</label><input type="number" id="habit-goal-days" min="1" placeholder="e.g. 30"></div>
+  </div>
+  <div id="habit-goal-auto-info" style="display:none;font-size:11px;color:var(--text3);margin:-6px 0 8px">First goal is 7 days; once you hit it the goal climbs automatically (7 → 14 → 30 → 60 → 100 → 200 → 365).</div>
   <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-journal-prompt" checked> Show reflection prompt when completed</label></div>
   <input type="hidden" id="habit-edit-id">
   <div style="display:flex;gap:8px;margin-top:16px">

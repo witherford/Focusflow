@@ -8,15 +8,55 @@ import { promptHabitJournal } from './journalPrompt.js';
 import { computeStreakWithFreeze } from './streakFreeze.js';
 import { attachReorder, reorderArr } from '../../ui/dragReorder.js';
 
-let hbOpen = { morning: true, afternoon: true, evening: true };
-const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙' };
+const BLOCKS = ['morning', 'afternoon', 'evening', 'allday'];
+let hbOpen = { morning: true, afternoon: true, evening: true, allday: true };
+const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙', allday: '⏳' };
+const blockLabels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', allday: 'All day' };
 
-export function collapseHabits() { hbOpen = { morning: false, afternoon: false, evening: false }; renderHabitsToday(); }
-export function expandHabits() { hbOpen = { morning: true, afternoon: true, evening: true }; renderHabitsToday(); }
+export function collapseHabits() { BLOCKS.forEach(b => hbOpen[b] = false); renderHabitsToday(); }
+export function expandHabits()   { BLOCKS.forEach(b => hbOpen[b] = true); renderHabitsToday(); }
 export function toggleHabitBlock(b) { hbOpen[b] = !hbOpen[b]; renderHabitsToday(); }
 
 // Is a habit "done" for today? Works for both binary and counter modes.
 export function doneToday(h) { return metOn(h, today()); }
+
+// ── Streak-goal helpers ────────────────────────────────────────────────────
+const AUTO_BRACKETS = [7, 14, 30, 60, 100, 200, 365];
+
+// Returns the current goal target for a habit. For auto-incremental, walks
+// the bracket list and returns the next bracket above the current streak.
+export function streakGoalTarget(h, streak) {
+  if (!h?.streakGoalMode) return 0;
+  if (h.streakGoalMode === 'number') return Math.max(1, parseInt(h.streakGoalDays) || 0);
+  if (h.streakGoalMode === 'auto') {
+    for (const b of AUTO_BRACKETS) if (streak < b) return b;
+    return AUTO_BRACKETS[AUTO_BRACKETS.length - 1];
+  }
+  return 0;
+}
+
+// Renders the streak status icon + bar shown on every habit row.
+export function streakStatusBadge(h) {
+  const streak = calcStreak(h.id);
+  const target = streakGoalTarget(h, streak);
+  if (!target) {
+    return `<span class="streak-status" title="Current streak"><span class="ss-num">${streak}</span><span class="ss-flame">🔥</span></span>`;
+  }
+  const pct = Math.min(100, Math.round(streak / target * 100));
+  const colour = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--teal)' : 'var(--violet)';
+  return `<span class="streak-status" title="${streak} / ${target}-day goal">
+    <span class="ss-bar"><span class="ss-bar-fill" style="width:${pct}%;background:${colour}"></span></span>
+    <span class="ss-num">${streak}/${target}</span>
+  </span>`;
+}
+
+export function updateHabitGoalFields() {
+  const mode = document.getElementById('habit-goal-mode')?.value || '';
+  const numWrap = document.getElementById('habit-goal-num-wrap');
+  const autoInfo = document.getElementById('habit-goal-auto-info');
+  if (numWrap) numWrap.style.display = mode === 'number' ? '' : 'none';
+  if (autoInfo) autoInfo.style.display = mode === 'auto' ? '' : 'none';
+}
 
 // Compact badge shown on a linked habit's row. e.g. "🔗 meditate · 15m".
 export function linkedHabitBadge(h) {
@@ -66,7 +106,7 @@ function renderHabitCard(h, { flat = false } = {}) {
         <div class="habit-meta">${meta}</div>
       </div>
       ${blockBadge}
-      ${streakBadge(streak, h.tierBase || DEFAULT_TIERS)}
+      ${streakStatusBadge(h)}
     </div>
     <button class="btn-icon" data-habit-action="edit" data-id="${h.id}" aria-label="Edit habit">✏️</button>
     <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}" aria-label="Delete habit">✕</button>
@@ -254,10 +294,18 @@ function handleLongPress(h) {
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
 }
 
+// Filter that puts a habit in the All-day block when its block is "allday"
+// OR when h.allDay is set (the legacy boolean still seen on older data).
+function habitInBlock(h, block) {
+  if (block === 'allday') return h.block === 'allday' || h.allDay === true;
+  if (h.allDay === true) return false;        // all-day habits never appear in time blocks
+  return h.block === block;
+}
+
 export function renderHabitsToday() {
-  ['morning', 'afternoon', 'evening'].forEach(b => {
+  BLOCKS.forEach(b => {
     const el = document.getElementById('h-' + b); if (!el) return;
-    const bH = S.habits.filter(h => h.block === b);
+    const bH = S.habits.filter(h => habitInBlock(h, b));
     const doneCount = bH.filter(h => doneToday(h)).length;
     const pct = bH.length ? Math.round(doneCount / bH.length * 100) : 0;
     const open = hbOpen[b] !== false;
@@ -266,7 +314,7 @@ export function renderHabitsToday() {
       <div class="card-header" style="margin-bottom:8px;cursor:pointer" onclick="toggleHabitBlock('${b}')">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
           <span style="font-size:18px">${blockIcons[b]}</span>
-          <span class="card-title" style="margin:0;text-transform:capitalize">${b}</span>
+          <span class="card-title" style="margin:0">${blockLabels[b]}</span>
           <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${doneCount}/${bH.length}</span>
           ${bH.length ? `
             <div class="block-progress" style="flex:1;min-width:60px;display:flex;align-items:center;gap:6px;margin-left:4px">
@@ -276,9 +324,31 @@ export function renderHabitsToday() {
         </div>
         <span style="color:var(--text3);font-size:12px;flex-shrink:0">${open ? '▾' : '▸'}</span>
       </div>
-      ${open ? (bH.length ? `<div style="padding-top:4px">${bH.map(h => renderHabitCard(h)).join('')}</div>` : '<div style="color:var(--text3);font-size:13px;padding:4px">No habits here yet</div>') : ''}
+      ${open ? (bH.length ? `<div style="padding-top:4px" data-block-list="${b}">${bH.map(h => renderHabitCard(h)).join('')}</div>` : '<div style="color:var(--text3);font-size:13px;padding:4px">No habits here yet</div>') : ''}
     </div>`;
     wireGestures(el);
+    // Per-block drag-to-reorder. Reordering happens within the block — the
+    // overall S.habits array is reshuffled so the block's habits maintain
+    // their new relative order.
+    const listEl = el.querySelector(`[data-block-list="${b}"]`);
+    if (listEl && bH.length > 1) {
+      attachReorder(listEl, {
+        itemSelector: '.habit-row',
+        onReorder: (from, to) => {
+          // Map block-local indices back to S.habits indices.
+          const blockIds = bH.map(h => h.id);
+          const movedId = blockIds[from];
+          const targetId = blockIds[to];
+          const fromGlobal = S.habits.findIndex(h => h.id === movedId);
+          let toGlobal = S.habits.findIndex(h => h.id === targetId);
+          if (fromGlobal < 0 || toGlobal < 0) return;
+          if (fromGlobal < toGlobal) toGlobal -= 1; // splice index after removal
+          const [item] = S.habits.splice(fromGlobal, 1);
+          S.habits.splice(Math.max(0, Math.min(S.habits.length, toGlobal + (from < to ? 1 : 0))), 0, item);
+          save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+        },
+      });
+    }
   });
 }
 
@@ -377,9 +447,13 @@ export function openAddHabit() {
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = '';
   const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = '';
   const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = '';
+  // Streak goal defaults
+  const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = '';
+  const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = '';
   populateHabitGoalSelect('');
   toggleCounterFields();
   updateLinkedHabitFields();
+  updateHabitGoalFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -409,9 +483,13 @@ export function openEditHabit(id) {
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
   const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = lc.targetHrs ?? '';
   const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = lc.prompt || '';
+  // Streak goal
+  const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = h.streakGoalMode || '';
+  const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = h.streakGoalDays ?? '';
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   updateLinkedHabitFields();
+  updateHabitGoalFields();
   document.getElementById('m-habit').style.display = 'flex';
 }
 
@@ -492,6 +570,8 @@ export function saveHabit() {
     whyMatters,
     linkedType,
     linkedConfig,
+    streakGoalMode: document.getElementById('habit-goal-mode')?.value || null,
+    streakGoalDays: parseInt(document.getElementById('habit-goal-days')?.value) || null,
   };
   if (mode === 'counter') {
     if (target) data.target = target;
@@ -551,6 +631,7 @@ window.renderHabitHeatmap = renderHabitHeatmap;
 window.toggleCounterFields = toggleCounterFields;
 window.toggleAllDayHabit = toggleAllDayHabit;
 window.updateLinkedHabitFields = updateLinkedHabitFields;
+window.updateHabitGoalFields = updateHabitGoalFields;
 window.openLinkedHabit = openLinkedHabit;
 window.markHabitDoneFromFlow = markHabitDoneFromFlow;
 window.applyUnitPreset = applyUnitPreset;

@@ -7,12 +7,14 @@ import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
 import { renderCloudSyncSection } from './cloudSyncUI.js';
 import { renderFeatureToggles, applyFeatureVisibility } from './featureToggles.js';
 import { renderUpdaterSection } from '../../core/updater.js';
+import { renderShortcutChooser } from '../../ui/bottomNav.js';
 
 export function renderPasscodeSection() {
   renderReminderSection();
   renderBackupList();
   renderFeatureToggles();
   renderWidgetSettings();
+  renderShortcutChooser();
   renderCloudSyncSection();
   renderUpdaterSection();
   applyFeatureVisibility();

@@ -1,9 +1,13 @@
-// Insights — weekly/monthly review + charts
-import { S } from '../../core/state.js';
+// Insights — weekly/monthly review + charts.
+// Also surfaces the "today" stats / heatstrip / goals / priorities that used
+// to live on the dashboard.
+import { S, today } from '../../core/state.js';
 import { habitCompletionByWeek, dwMinutesByDay, fitnessWeightVolumeByWeek, weekSummary, productivityByHour } from './trends.js';
 import './reviewWizard.js';
-import { goalProgress } from '../goals/progress.js';
+import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { renderLevelCard, renderBadges } from '../../core/gamification.js';
+import { metOn } from '../habits/counterMode.js';
+import { progressRing } from '../../ui/progressRing.js';
 
 function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
 
@@ -30,9 +34,65 @@ function sparkLine(data, valueFn) {
   </svg>`;
 }
 
+function calcGlobalStreak() {
+  if (!S.habits?.length) return 0;
+  let s = 0;
+  for (let i = 0; i < 365; i++) {
+    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+    if (S.habits.some(h => metOn(h, k))) s++; else break;
+  }
+  return s;
+}
+
+function renderInsightsTodayStats() {
+  const log = S.habitLog[today()] || {};
+  const done = (S.habits || []).filter(h => metOn(h, today())).length;
+  const pct = (S.habits || []).length ? Math.round(done / S.habits.length * 100) : 0;
+  setText('ins-today-habits', pct + '%');
+  setText('ins-today-tasks', (S.tasks || []).filter(t => t.done && t.doneAt === today()).length);
+  const dwMin = window.getTodayDwMin?.() || 0;
+  setText('ins-today-focus', (dwMin / 60).toFixed(1) + 'h');
+  setText('ins-today-streak', calcGlobalStreak());
+}
+
+function renderInsightsHeatStrip() {
+  const el = document.getElementById('ins-heatstrip'); if (!el) return;
+  if (!S.habits?.length) { el.innerHTML = ''; return; }
+  const days = 30; let cells = '';
+  for (let i = days - 1; i >= 0; i--) {
+    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+    const total = S.habits.length;
+    const doneN = S.habits.filter(h => metOn(h, k)).length;
+    const p = total ? doneN / total : 0;
+    const l = doneN === 0 ? 0 : p < .25 ? 1 : p < .5 ? 2 : p < 1 ? 3 : 4;
+    cells += `<div class="hm-cell" data-l="${l}" title="${k}: ${doneN}/${total}"></div>`;
+  }
+  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">Last 30 days</div><div style="font-size:11px;color:var(--text3)">habit density</div></div><div class="heat-strip">${cells}</div></div>`;
+}
+
+function renderInsightsPriorities() {
+  const el = document.getElementById('ins-priorities'); if (!el) return;
+  const overdue = (S.tasks || []).filter(t => !t.done && t.due && t.due < today());
+  const high = (S.tasks || []).filter(t => !t.done && t.priority === 'high');
+  if (!overdue.length && !high.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">🚨 Priorities</div></div><div style="display:flex;gap:8px;flex-wrap:wrap">${overdue.length ? `<span class="badge badge-rose">${overdue.length} overdue</span>` : ''}${high.length ? `<span class="badge badge-gold">${high.length} high-priority</span>` : ''}</div></div>`;
+}
+
+function renderInsightsTowardGoals() {
+  const el = document.getElementById('ins-toward-goals'); if (!el) return;
+  if (!S.goals?.length) { el.innerHTML = ''; return; }
+  const tg = tasksTowardGoals();
+  const top = [...S.goals].map(g => ({ g, p: goalProgress(g) })).sort((a, b) => b.p.pct - a.p.pct).slice(0, 3);
+  el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">🎯 Toward goals</div><div style="font-size:11px;color:var(--text3)">${tg.done}/${tg.total} task${tg.total === 1 ? '' : 's'} linked</div></div><div style="display:flex;gap:12px;overflow-x:auto;padding:4px 0">${top.map(({ g, p }) => `<div style="display:flex;flex-direction:column;align-items:center;min-width:88px;cursor:pointer" onclick="goPage('goals')">${progressRing({ pct: p.pct, size: 56, stroke: 5, color: 'var(--teal)' })}<div style="font-size:11px;color:var(--text2);margin-top:4px;text-align:center;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name}</div></div>`).join('')}</div></div>`;
+}
+
 export function renderInsights() {
   renderLevelCard();
   renderBadges();
+  renderInsightsTodayStats();
+  renderInsightsHeatStrip();
+  renderInsightsPriorities();
+  renderInsightsTowardGoals();
   const sum = weekSummary();
   setText('ins-hab-week', sum.habits.pct + '%');
   setText('ins-focus-week', (sum.dwMin / 60).toFixed(1) + 'h');
