@@ -48,16 +48,17 @@ function renderActiveRoutineCard() {
   }
   const planned = dayLabelForDate(r, new Date());
   const lastDone = (S.training?.history || []).slice().reverse().find(h => h.routineId === r.id);
-  el.innerHTML = `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="flex:1;min-width:0">
-      <div style="font-weight:700;font-size:16px">${r.name}</div>
-      <div style="font-size:12px;color:var(--text3)">${r.desc}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:6px">
-        Today: <strong style="color:${planned === 'rest' ? 'var(--text3)' : 'var(--teal)'}">${planned}</strong>
-        ${lastDone ? ` · last: ${lastDone.date} (${lastDone.dayLabel})` : ''}
+  const desc = (r.desc || '').trim();
+  const todayColour = planned === 'rest' ? 'var(--text3)' : 'var(--teal)';
+  el.innerHTML = `<div class="routine-card active" style="margin-bottom:0">
+    <div class="rc-info">
+      <div class="rc-name" style="font-size:16px">${r.name}</div>
+      ${desc ? `<div class="rc-desc">${desc}</div>` : ''}
+      <div class="rc-meta" style="font-family:'DM Sans',sans-serif;color:var(--text2)">
+        Today: <strong style="color:${todayColour}">${planned}</strong>${lastDone ? ` · last: ${lastDone.date} (${lastDone.dayLabel})` : ''}
       </div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <div class="rc-actions" style="flex-direction:row;gap:6px;align-self:center;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="openWorkoutLogger()">▶ Start workout</button>
       <button class="btn btn-sm" onclick="openRoutineEditor('${r.id}')">✏️ Edit</button>
       <button class="btn btn-sm" onclick="deactivateRoutinePrompt()">⏹ Deactivate</button>

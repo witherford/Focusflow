@@ -40,6 +40,9 @@ export function streakStatusBadge(h) {
   const streak = calcStreak(h.id);
   const target = streakGoalTarget(h, streak);
   if (!target) {
+    if (streak <= 0) {
+      return `<span class="streak-status" title="No streak yet"><span class="ss-num ss-num-empty">—</span></span>`;
+    }
     return `<span class="streak-status" title="Current streak"><span class="ss-num">${streak}</span><span class="ss-flame">🔥</span></span>`;
   }
   const pct = Math.min(100, Math.round(streak / target * 100));

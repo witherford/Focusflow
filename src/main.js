@@ -173,10 +173,12 @@ renderBottomNav();
 startIconNormalizer();
 startOnboarding();
 
-// Show app version in sidebar header + "latest version" status block, then
-// kick off a one-shot background check.
+// Show app version in sidebar header + the About card + "latest version"
+// status block, then kick off a one-shot background check.
 const _verEl = document.getElementById('logoVersion');
 if (_verEl) _verEl.textContent = 'V' + APP_VERSION;
+const _aboutEl = document.getElementById('about-version');
+if (_aboutEl) _aboutEl.textContent = 'V' + APP_VERSION;
 import('./core/updater.js').then(({ renderSidebarUpdateStatus, autoCheckOnStartup }) => {
   renderSidebarUpdateStatus();
   autoCheckOnStartup();

@@ -23,11 +23,26 @@ const DEFAULTS = Object.fromEntries(WIDGETS.map(w => [w.id, !w.off]));
 // Hard-deprecated widget ids — quickstart was removed entirely.
 const DEPRECATED = new Set(['quickstart']);
 
+// V1.0.8 moved stats/heatstrip/goals/priorities from the dashboard to the
+// Insights page. Existing users had those four flagged on, so without this
+// migration the cards would still render on their dashboard. Run once,
+// stamp a flag, never run again.
+const V108_MOVED_TO_INSIGHTS = ['stats', 'heatstrip', 'goals', 'priorities'];
+
+function maybeMigrateV108(dashWidgets) {
+  if (!S.settings) S.settings = {};
+  if (S.settings.dashMigratedV108) return;
+  for (const id of V108_MOVED_TO_INSIGHTS) dashWidgets[id] = false;
+  S.settings.dashMigratedV108 = true;
+  try { save(); } catch {}
+}
+
 export function getWidgetSettings() {
   if (!S.settings) S.settings = {};
   if (!S.settings.dashWidgets) S.settings.dashWidgets = { ...DEFAULTS };
   // Backfill new widgets with their default value (on or off).
   for (const w of WIDGETS) if (S.settings.dashWidgets[w.id] === undefined) S.settings.dashWidgets[w.id] = !w.off;
+  maybeMigrateV108(S.settings.dashWidgets);
   return S.settings.dashWidgets;
 }
 
