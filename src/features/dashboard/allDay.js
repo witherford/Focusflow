@@ -3,9 +3,10 @@ import { S, today, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
 import { isCounter, countFor, isCumulative, increment, complete, reset } from '../habits/counterMode.js';
 import { attachHabitGestures } from '../habits/gestures.js';
+import { isHabitActiveToday } from '../habits/page.js';
 
 export function getAllDayHabits() {
-  return (S.habits || []).filter(h => h.allDay || h.block === 'allday');
+  return (S.habits || []).filter(h => (h.allDay || h.block === 'allday') && isHabitActiveToday(h));
 }
 
 export function renderAllDay() {
@@ -25,8 +26,10 @@ function renderTile(h) {
   const pct = counter && target > 0 ? Math.min(100, Math.round(count / target * 100)) : (count ? 100 : 0);
   const unit = h.unit || '';
   const label = isCumulative(h) ? `${count}${unit ? ' ' + unit : ''}` : `${count}${unit ? ' ' + unit : ''} / ${target}${unit ? ' ' + unit : ''}`;
-  const circ = 188.5; // r=30
+  const circ = 188.5;
   const off = circ * (1 - pct / 100);
+  const streak = (typeof window.calcStreak === 'function') ? window.calcStreak(h.id) : 0;
+  const xpAward = (window.XP_TABLE && window.XP_TABLE.habit) || 10;
   return `<div class="allday-tile${pct >= 100 ? ' done' : ''}" data-habit-id="${h.id}">
     <svg class="allday-ring" width="88" height="88" viewBox="0 0 88 88">
       <circle class="ring-track" cx="44" cy="44" r="30" />
@@ -35,6 +38,7 @@ function renderTile(h) {
     </svg>
     <div class="allday-name">${h.name}</div>
     <div class="allday-meta">${label}</div>
+    <div class="allday-foot">${streak > 0 ? `🔥 ${streak}d` : ''}<span class="xp-chip" style="margin-left:4px">+${xpAward} XP</span></div>
   </div>`;
 }
 

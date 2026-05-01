@@ -86,6 +86,50 @@ function renderInsightsTowardGoals() {
   el.innerHTML = `<div class="card"><div class="card-header"><div class="card-title">🎯 Toward goals</div><div style="font-size:11px;color:var(--text3)">${tg.done}/${tg.total} task${tg.total === 1 ? '' : 's'} linked</div></div><div style="display:flex;gap:12px;overflow-x:auto;padding:4px 0">${top.map(({ g, p }) => `<div style="display:flex;flex-direction:column;align-items:center;min-width:88px;cursor:pointer" onclick="goPage('goals')">${progressRing({ pct: p.pct, size: 56, stroke: 5, color: 'var(--teal)' })}<div style="font-size:11px;color:var(--text2);margin-top:4px;text-align:center;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name}</div></div>`).join('')}</div></div>`;
 }
 
+export function renderInsightsSleepLog() {
+  const el = document.getElementById('ins-sleep-log'); if (!el) return;
+  const log = (S.sleepLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (!log.length) { el.innerHTML = '<div class="empty-state"><div class="es-icon">😴</div><div class="es-sub">No sleep data yet — log a night on the Sleep page.</div></div>'; return; }
+  const rangeSel = document.getElementById('ins-sleep-range');
+  const range = rangeSel?.value || '7';
+  let cutoffDays = parseInt(range);
+  let filtered = log;
+  if (range !== 'all' && cutoffDays > 0) {
+    const cutoff = new Date(Date.now() - cutoffDays * 864e5).toISOString().split('T')[0];
+    filtered = log.filter(s => s.date >= cutoff);
+  }
+  if (!filtered.length) { el.innerHTML = '<div class="caption" style="text-align:center;padding:14px">No sleep entries in this range.</div>'; return; }
+  const hours = filtered.map(s => s.hours || 0);
+  const total = hours.reduce((a, b) => a + b, 0);
+  const avg = total / hours.length;
+  const max = Math.max(10, ...hours);
+  const min = Math.min(...hours);
+  // Bar chart (or thin line for very long ranges)
+  const barWidth = filtered.length > 60 ? 1 : Math.max(2, Math.floor(280 / filtered.length));
+  const w = filtered.length * (barWidth + 1);
+  const h = 110;
+  const bars = filtered.map((s, i) => {
+    const v = s.hours || 0;
+    const bh = Math.max(1, (v / max) * h);
+    const colour = v >= 8 ? 'var(--green)' : v >= 6.5 ? 'var(--teal)' : v >= 5 ? 'var(--gold)' : 'var(--rose)';
+    return `<rect x="${i * (barWidth + 1)}" y="${h - bh}" width="${barWidth}" height="${bh}" fill="${colour}" rx="1"><title>${s.date}: ${v}h${s.quality ? ' · q' + s.quality : ''}</title></rect>`;
+  }).join('');
+  // 8h reference line
+  const refY = h - (8 / max) * h;
+  el.innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+      <span><strong style="color:var(--text)">${avg.toFixed(1)}h</strong> <span style="color:var(--text3)">avg</span></span>
+      <span><strong style="color:var(--text)">${total.toFixed(1)}h</strong> <span style="color:var(--text3)">total · ${filtered.length} night${filtered.length === 1 ? '' : 's'}</span></span>
+      <span><strong style="color:var(--text)">${min}–${max.toFixed(1)}h</strong> <span style="color:var(--text3)">range</span></span>
+    </div>
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px">
+      <line x1="0" x2="${w}" y1="${refY}" y2="${refY}" stroke="var(--teal)" stroke-dasharray="3 3" stroke-width="0.6" opacity="0.6"/>
+      ${bars}
+    </svg>
+    <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">teal dashed = 8h target</div>
+  `;
+}
+
 export function renderInsights() {
   renderLevelCard();
   renderBadges();
@@ -93,6 +137,7 @@ export function renderInsights() {
   renderInsightsHeatStrip();
   renderInsightsPriorities();
   renderInsightsTowardGoals();
+  renderInsightsSleepLog();
   const sum = weekSummary();
   setText('ins-hab-week', sum.habits.pct + '%');
   setText('ins-focus-week', (sum.dwMin / 60).toFixed(1) + 'h');
@@ -145,10 +190,14 @@ export function renderInsights() {
 }
 
 export async function runWeeklyReview() {
-  const card = document.getElementById('ins-review-card');
-  const body = document.getElementById('ins-review');
+  // Prefer the top-of-page review card (V1.1.2). Fall back to the bottom one
+  // if the user is on an older HTML cache.
+  const card = document.getElementById('ins-review-card-top') || document.getElementById('ins-review-card');
+  const body = document.getElementById('ins-review-top') || document.getElementById('ins-review');
   if (!card || !body) return;
   card.style.display = '';
+  // Scroll into view so the user sees the result without hunting.
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   body.innerHTML = '<span style="color:var(--text3)">Thinking…</span>';
   const sum = weekSummary();
   const lines = [];

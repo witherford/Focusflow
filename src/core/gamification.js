@@ -69,6 +69,38 @@ export const BADGES = [
   { id: 'week-check-in', icon: '📝', name: 'Week of check-ins', check: () => Object.values(S.checkins || {}).filter(c => c && (c.mood || c.sleepHrs)).length >= 7 },
   { id: 'level-5', icon: '⭐', name: 'Level 5', check: () => progress().level >= 5 },
   { id: 'level-10', icon: '🌟', name: 'Level 10', check: () => progress().level >= 10 },
+  { id: 'level-20', icon: '💫', name: 'Level 20', check: () => progress().level >= 20 },
+  { id: 'level-50', icon: '🌠', name: 'Level 50', check: () => progress().level >= 50 },
+  { id: 'fifty-tasks', icon: '✅', name: '50 tasks done', check: () => (S.tasks || []).filter(t => t.done).length >= 50 },
+  { id: 'ten-weight-logs', icon: '📉', name: '10 weight logs', check: () => (S.profile?.weightLog || []).length >= 10 },
+  { id: 'fifty-sessions', icon: '🧨', name: '50 focus sessions', check: () => (S.deepwork?.sessions || []).length >= 50 },
+  { id: 'hundred-sessions', icon: '🎇', name: '100 focus sessions', check: () => (S.deepwork?.sessions || []).length >= 100 },
+  { id: 'five-fit', icon: '🏋️', name: '5 workouts', check: () => (S.fitness?.sessions || []).length >= 5 },
+  { id: 'twenty-fit', icon: '🥇', name: '20 workouts', check: () => (S.fitness?.sessions || []).length >= 20 },
+  { id: 'ten-meds', icon: '☯️', name: '10 meditations', check: () => (S.meditation?.sessions || []).length >= 10 },
+  { id: 'fifty-meds', icon: '🕉️', name: '50 meditations', check: () => (S.meditation?.sessions || []).length >= 50 },
+  { id: 'ten-journals', icon: '📔', name: '10 journal entries', check: () => (S.journal || []).length >= 10 },
+  { id: 'fifty-journals', icon: '📖', name: '50 journal entries', check: () => (S.journal || []).length >= 50 },
+  { id: 'streak-7', icon: '🔥', name: '7-day habit streak', check: () => {
+      if (typeof window.calcStreak !== 'function') return false;
+      return (S.habits || []).some(h => window.calcStreak(h.id) >= 7);
+    } },
+  { id: 'streak-30', icon: '🌋', name: '30-day habit streak', check: () => {
+      if (typeof window.calcStreak !== 'function') return false;
+      return (S.habits || []).some(h => window.calcStreak(h.id) >= 30);
+    } },
+  { id: 'streak-100', icon: '🏔️', name: '100-day habit streak', check: () => {
+      if (typeof window.calcStreak !== 'function') return false;
+      return (S.habits || []).some(h => window.calcStreak(h.id) >= 100);
+    } },
+  { id: 'first-routine', icon: '📋', name: 'First training routine', check: () => (S.profile?.trainRoutines || []).length >= 1 },
+  { id: 'three-goals', icon: '🎯', name: '3 goals set', check: () => (S.goals || []).length >= 3 },
+  { id: 'goal-complete', icon: '🏁', name: 'First goal complete', check: () => (S.goals || []).some(g => g.done || g.completed) },
+  { id: 'sleep-week', icon: '🌙', name: 'Week of sleep logs', check: () => (S.sleepLog || []).length >= 7 },
+  { id: 'sleep-month', icon: '🌜', name: 'Month of sleep logs', check: () => (S.sleepLog || []).length >= 30 },
+  { id: 'all-day-habit', icon: '⏳', name: 'First all-day habit', check: () => (S.habits || []).some(h => h.allDay || h.block === 'allday') },
+  { id: 'linked-habit', icon: '🔗', name: 'First linked habit', check: () => (S.habits || []).some(h => h.linkedType) },
+  { id: 'level-25', icon: '🌌', name: 'Level 25', check: () => progress().level >= 25 },
 ];
 
 export function checkBadges() {

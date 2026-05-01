@@ -17,14 +17,26 @@ export function ensureFreezeFields(h) {
   if (h.freezeLastEarnedStreak == null) h.freezeLastEarnedStreak = 0;
 }
 
+// Match the helper in habits/page.js (kept here as a tiny dup so the freeze
+// engine can be unit-tested in isolation without circular imports).
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function isHabitActiveOnDate(h, dateStr) {
+  if (!h?.activeDays || !Array.isArray(h.activeDays) || h.activeDays.length === 0) return true;
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  return h.activeDays.includes(WEEKDAY_SHORT[dow]);
+}
+
 // Returns the adjusted streak, taking freeze tokens into account.
 // Earns a token every EARN_EVERY consecutive "met or frozen" days.
+// Days where the habit isn't scheduled (per `activeDays`) are skipped — they
+// don't count toward the streak but they don't break it either.
 export function computeStreakWithFreeze(h) {
   ensureFreezeFields(h);
   let streak = 0;
   const newlyFrozen = [];
   for (let i = 0; i < 365; i++) {
     const k = dateKey(i);
+    if (!isHabitActiveOnDate(h, k)) continue;       // off-day: skip
     if (metOn(h, k)) { streak++; continue; }
     // Already auto-frozen earlier
     if (h.freezeUsedDates.includes(k)) { streak++; continue; }

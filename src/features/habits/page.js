@@ -13,6 +13,41 @@ let hbOpen = { morning: true, afternoon: true, evening: true, allday: true };
 const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙', allday: '⏳' };
 const blockLabels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', allday: 'All day' };
 
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// True if the habit is scheduled to run on the given date (a YYYY-MM-DD string).
+// Empty / missing activeDays = every day.
+export function isHabitActiveOnDate(h, dateStr) {
+  if (!h?.activeDays || !Array.isArray(h.activeDays) || h.activeDays.length === 0) return true;
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  return h.activeDays.includes(WEEKDAY_SHORT[dow]);
+}
+
+// Convenience for "today".
+export function isHabitActiveToday(h) {
+  return isHabitActiveOnDate(h, today());
+}
+
+const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// Read the picker into a list of "Mon" / "Tue" ... or null when all 7 are
+// ticked (we treat an empty / undefined `activeDays` as "every day").
+export function readWeekdayPickerValue() {
+  const inputs = document.querySelectorAll('#habit-weekday-picker input[data-day]');
+  const picked = Array.from(inputs).filter(i => i.checked).map(i => i.dataset.day);
+  if (picked.length === 0 || picked.length === 7) return null;
+  return picked;
+}
+
+export function setWeekdayPickerValue(arr) {
+  const inputs = document.querySelectorAll('#habit-weekday-picker input[data-day]');
+  if (!Array.isArray(arr) || arr.length === 0) {
+    inputs.forEach(i => { i.checked = true; });
+  } else {
+    inputs.forEach(i => { i.checked = arr.includes(i.dataset.day); });
+  }
+}
+
 export function collapseHabits() { BLOCKS.forEach(b => hbOpen[b] = false); renderHabitsToday(); }
 export function expandHabits()   { BLOCKS.forEach(b => hbOpen[b] = true); renderHabitsToday(); }
 export function toggleHabitBlock(b) { hbOpen[b] = !hbOpen[b]; renderHabitsToday(); }
@@ -97,6 +132,8 @@ function renderHabitCard(h, { flat = false } = {}) {
 
   const blockBadge = flat ? `<span class="badge badge-violet">${h.block}</span>` : '';
   const linkBadge = linkedHabitBadge(h);
+  const xpAward = (window.XP_TABLE && window.XP_TABLE.habit) || 10;
+  const xpChip = `<span class="xp-chip" title="XP awarded on completion">+${xpAward} XP</span>`;
 
   // Gestures attach to .habit-tap (the inner zone), NOT the row. The
   // edit / delete buttons live as siblings of .habit-tap, so pointer events
@@ -105,7 +142,7 @@ function renderHabitCard(h, { flat = false } = {}) {
     <div class="habit-tap">
       ${ring}
       <div class="habit-info">
-        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${linkBadge}</div>
+        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${linkBadge}${xpChip}</div>
         <div class="habit-meta">${meta}</div>
       </div>
       ${blockBadge}
@@ -299,9 +336,11 @@ function handleLongPress(h) {
 
 // Filter that puts a habit in the All-day block when its block is "allday"
 // OR when h.allDay is set (the legacy boolean still seen on older data).
+// Also filters out habits whose activeDays don't include today.
 function habitInBlock(h, block) {
+  if (!isHabitActiveToday(h)) return false;
   if (block === 'allday') return h.block === 'allday' || h.allDay === true;
-  if (h.allDay === true) return false;        // all-day habits never appear in time blocks
+  if (h.allDay === true) return false;
   return h.block === block;
 }
 
@@ -453,6 +492,7 @@ export function openAddHabit() {
   // Streak goal defaults
   const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = '';
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = '';
+  setWeekdayPickerValue(null);
   populateHabitGoalSelect('');
   toggleCounterFields();
   updateLinkedHabitFields();
@@ -489,6 +529,7 @@ export function openEditHabit(id) {
   // Streak goal
   const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = h.streakGoalMode || '';
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = h.streakGoalDays ?? '';
+  setWeekdayPickerValue(h.activeDays);
   populateHabitGoalSelect(h.goalId || '');
   toggleCounterFields();
   updateLinkedHabitFields();
@@ -575,6 +616,7 @@ export function saveHabit() {
     linkedConfig,
     streakGoalMode: document.getElementById('habit-goal-mode')?.value || null,
     streakGoalDays: parseInt(document.getElementById('habit-goal-days')?.value) || null,
+    activeDays: readWeekdayPickerValue(),
   };
   if (mode === 'counter') {
     if (target) data.target = target;

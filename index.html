@@ -56,6 +56,7 @@
     <div class="nav-item" data-page="journal"><span class="nav-emoji">📓</span> Journal</div>
     <div class="nav-section">You</div>
     <div class="nav-item" data-page="profile"><span class="nav-emoji">👤</span> Profile & AI</div>
+    <div class="nav-item" data-page="docs"><span class="nav-emoji">📖</span> Docs</div>
     <div class="nav-item" data-page="settings"><span class="nav-emoji">⚙️</span> Settings</div>
   </nav>
 
@@ -74,6 +75,7 @@
       <div class="page-title-wrap">
         <div class="page-subtitle" id="dash-date-label">Loading…</div>
         <div class="page-title" id="dash-greeting">Good morning</div>
+        <div class="dash-streak-chip" id="dash-streak-chip">🔥 <span>0-day streak</span></div>
       </div>
       <div class="header-actions">
         <div class="autosave-wrap" id="autosaveDot"><div class="autosave-dot" id="autosaveDotInner"></div><span id="autosaveLabel">Saved</span></div>
@@ -224,6 +226,12 @@
   <div style="padding:0 20px">
     <div id="level-card"></div>
 
+    <!-- AI weekly review pinned to the top — fires on demand via the header button. -->
+    <div class="card" id="ins-review-card-top" style="margin-bottom:14px;display:none">
+      <div class="card-header"><div class="card-title">✨ AI weekly review</div></div>
+      <div id="ins-review-top" style="font-size:13px;line-height:1.7;color:var(--text2)"></div>
+    </div>
+
     <!-- Today (moved from the dashboard) -->
     <div class="stat-grid" id="ins-today-stat-grid" style="margin-bottom:14px">
       <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-today-habits">0%</div><div class="stat-label">Habits today</div></div>
@@ -247,6 +255,18 @@
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Time-of-day · focus minutes</div></div><div id="ins-tod-chart"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Goals progress</div></div><div id="ins-goals"></div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Fitness volume · weightlifting</div></div><div id="ins-fit-chart"></div></div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header" style="align-items:center"><div class="card-title">😴 Sleep log</div><select id="ins-sleep-range" onchange="renderInsightsSleepLog()" style="font-size:12px;padding:4px 8px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text)">
+        <option value="7" selected>7 days</option>
+        <option value="14">14 days</option>
+        <option value="30">1 month</option>
+        <option value="90">3 months</option>
+        <option value="180">6 months</option>
+        <option value="365">12 months</option>
+        <option value="all">All time</option>
+      </select></div>
+      <div id="ins-sleep-log"></div>
+    </div>
     <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
     <div id="badges-grid" style="margin-bottom:14px"></div>
   </div>
@@ -780,6 +800,21 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════ DOCS ════════ -->
+<div class="page" id="page-docs">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">📖 Docs</div><div class="page-subtitle">How FocusFlow works</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="page-body">
+    <div id="docs-body"></div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════ SETTINGS ════ -->
 <div class="page" id="page-settings">
   <div class="page-header">
@@ -1132,6 +1167,17 @@ Review with team | low | | first pass only"></textarea></div>
     <div class="form-row"><label>Mode</label><select id="habit-mode" onchange="toggleCounterFields()"><option value="binary">Binary (done/not done)</option><option value="counter">Counter (N per day)</option></select></div>
   </div>
   <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="habit-allday" onchange="toggleAllDayHabit()"> ⏳ All-day habit (gradual throughout day — tap adds, hold resets, double-tap completes)</label></div>
+  <div class="form-row"><label>Active days <span style="color:var(--text3);font-size:11px;font-weight:400;margin-left:6px">untick to skip — streak isn't broken on off-days</span></label>
+    <div id="habit-weekday-picker" class="weekday-picker">
+      <label class="wd-pill" data-day="Mon"><input type="checkbox" data-day="Mon" checked><span>M</span></label>
+      <label class="wd-pill" data-day="Tue"><input type="checkbox" data-day="Tue" checked><span>T</span></label>
+      <label class="wd-pill" data-day="Wed"><input type="checkbox" data-day="Wed" checked><span>W</span></label>
+      <label class="wd-pill" data-day="Thu"><input type="checkbox" data-day="Thu" checked><span>T</span></label>
+      <label class="wd-pill" data-day="Fri"><input type="checkbox" data-day="Fri" checked><span>F</span></label>
+      <label class="wd-pill" data-day="Sat"><input type="checkbox" data-day="Sat" checked><span>S</span></label>
+      <label class="wd-pill" data-day="Sun"><input type="checkbox" data-day="Sun" checked><span>S</span></label>
+    </div>
+  </div>
   <div id="habit-counter-fields" style="display:none">
     <div class="form-grid">
       <div class="form-row"><label>Daily target</label><input type="number" id="habit-target" min="1" placeholder="e.g. 8"></div>

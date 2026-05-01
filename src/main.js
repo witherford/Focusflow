@@ -74,6 +74,7 @@ import { renderJournal } from './features/journal/page.js';
 import { renderProfile, attachAutoSave, applyAIVis, initRoutineDays } from './features/profile/page.js';
 import { renderPasscodeSection } from './features/settings/page.js';
 import { renderInsights } from './features/insights/page.js';
+import { renderDocs } from './features/docs/page.js';
 import { initPalette } from './ui/palette.js';
 import { initReminders } from './core/reminders.js';
 import { initBackup } from './core/backup.js';
@@ -118,6 +119,7 @@ export function renderPage(id) {
     case 'insights':    renderInsights(); break;
     case 'weight':      renderWeight(); break;
     case 'sleep':       renderSleep(); break;
+    case 'docs':        renderDocs(); break;
   }
 }
 
@@ -140,6 +142,7 @@ export function renderAll() {
   safe(renderJournal, 'journal');
   safe(renderProfile, 'profile'); safe(renderCustomCats, 'profile.cats');
   safe(renderPasscodeSection, 'settings.passcode');
+  safe(renderDocs, 'docs');
 }
 
 // Global error listeners so uncaught errors don't silently blank features.

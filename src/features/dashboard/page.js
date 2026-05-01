@@ -5,6 +5,7 @@ import { progressRing } from '../../ui/progressRing.js';
 import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { metOn } from '../habits/counterMode.js';
 import { effectivePeriodKey } from '../chores/period.js';
+import { isHabitActiveToday } from '../habits/page.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
 import { renderAllDay } from './allDay.js';
 import { renderCheckin } from './checkin.js';
@@ -31,6 +32,13 @@ export function renderDash() {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dateLbl = document.getElementById('dash-date-label'); if (dateLbl) dateLbl.textContent = days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
   const greetEl = document.getElementById('dash-greeting'); if (greetEl) greetEl.textContent = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (S.profile.name ? ' ' + S.profile.name : '');
+  // Streak chip lives directly below the greeting so it survives the
+  // stats-grid being toggled off (which is now the default per V1.0.8).
+  const streakChipEl = document.getElementById('dash-streak-chip');
+  if (streakChipEl) {
+    const s = calcStreak_global();
+    streakChipEl.innerHTML = s > 0 ? `🔥 <span>${s}-day streak</span>` : '✨ <span>Start your streak today</span>';
+  }
 
   show('stat-grid', isWidgetOn('stats'));
   if (isWidgetOn('stats')) {
@@ -84,7 +92,7 @@ export function renderUpNext() {
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const block = currentBlock();
   const items = [];
-  S.habits.filter(h => h.block === block && !habitDoneToday(h)).slice(0, 3).forEach(h => items.push({ kind: 'habit', id: h.id, icon: h.icon || '●', name: h.name }));
+  S.habits.filter(h => h.block === block && isHabitActiveToday(h) && !habitDoneToday(h)).slice(0, 3).forEach(h => items.push({ kind: 'habit', id: h.id, icon: h.icon || '●', name: h.name }));
   if (block === 'morning') {
     S.chores.filter(c => c.day === todayDay && !cl[c.id]).slice(0, 2).forEach(c => items.push({ kind: 'chore', id: c.id, icon: '🧹', name: c.name }));
   }
@@ -175,6 +183,19 @@ export function renderSchedule() {
   el.innerHTML = html + '</div>';
 }
 
+// Streak count for a bad habit = consecutive days from today backwards
+// where the user has NOT logged an "indulged" entry. Capped at 365.
+function badHabitStreak(habitName) {
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+    const indulged = (S.journal || []).some(j => j.habitId === habitName && j.type === 'indulged' && j.datetime?.startsWith(k));
+    if (indulged) break;
+    streak++;
+  }
+  return streak;
+}
+
 export function renderBadHabits() {
   const el = document.getElementById('dash-bad-habits'); if (!el) return;
   const neg = [...(S.profile.negHabits || []), ...(S.profile.negCustom || '').split('\n').filter(x => x.trim())];
@@ -186,7 +207,9 @@ export function renderBadHabits() {
     const last = entries.length ? entries[entries.length - 1].type : '';
     const bc = last === 'avoided' ? 'var(--green)' : last === 'indulged' ? 'var(--rose)' : 'var(--border2)';
     const icon = last === 'avoided' ? '✅ ' : last === 'indulged' ? '❌ ' : '⬜ ';
-    html += `<button class="btn btn-sm" onclick="openBH('${h.replace(/'/g, "\\'")}')" style="border-color:${bc};font-size:12px">${icon}${h}</button>`;
+    const streak = badHabitStreak(h);
+    const streakChip = streak > 0 ? ` <span style="font-size:10px;color:var(--gold);font-family:'DM Mono',monospace">🔥${streak}d</span>` : '';
+    html += `<button class="btn btn-sm" onclick="openBH('${h.replace(/'/g, "\\'")}')" style="border-color:${bc};font-size:12px">${icon}${h}${streakChip}</button>`;
   });
   el.innerHTML = html + '</div></div>';
 }
@@ -197,7 +220,7 @@ export function renderTimeblocks() {
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const el = document.getElementById('dash-timeblocks'); if (!el) return;
   el.innerHTML = blocks.map(b => {
-    const bH = S.habits.filter(h => h.block === b.id);
+    const bH = S.habits.filter(h => h.block === b.id && isHabitActiveToday(h));
     const bC = b.id === 'morning' ? S.chores.filter(c => c.day === todayDay) : [];
     const bT = b.id === 'morning' ? S.tasks.filter(t => !t.done && !t.parentId && t.due === today()) : [];
     const items = [
