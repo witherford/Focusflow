@@ -1,6 +1,7 @@
 // Settings — passcode + reminders + backups
 import { S } from '../../core/state.js';
 import { isJournalEncrypted, setPasscode, resetPasscode } from '../journal/encryption.js';
+import { APP_VERSION } from '../../core/version.js';
 import { getReminderSettings, toggleReminders, saveReminderSettings } from '../../core/reminders.js';
 import { renderBackupList } from '../../core/backup.js';
 import { renderWidgetSettings } from '../dashboard/widgetVisibility.js';
@@ -18,6 +19,8 @@ export function renderPasscodeSection() {
   renderCloudSyncSection();
   renderUpdaterSection();
   applyFeatureVisibility();
+  // Keep the About blurb in step with the live version constant.
+  const av = document.getElementById('about-version'); if (av) av.textContent = 'V' + APP_VERSION;
   const set = document.getElementById('passcode-set');
   const manage = document.getElementById('passcode-manage');
   const status = document.getElementById('passcode-status');
