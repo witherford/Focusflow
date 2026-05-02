@@ -8,9 +8,18 @@ import { S, today } from '../../core/state.js';
 export function isCounter(habit) { return habit?.mode === 'counter'; }
 export function isCumulative(habit) { return habit?.cumulative === true; }
 
+export function isStack(habit) { return !!habit?.isStack && Array.isArray(habit?.children); }
+
+// True when every child of a stack is met on the given date.
+export function stackMet(parent, dateKey) {
+  if (!isStack(parent) || !parent.children.length) return false;
+  return parent.children.every(c => metOn(c, dateKey));
+}
+
 // Current count for a habit (today for daily counter; total for cumulative).
 export function countFor(habit) {
   if (!habit) return 0;
+  if (isStack(habit)) return habit.children.filter(c => metOn(c, today())).length;
   if (isCumulative(habit)) {
     // Sum all days for cumulative mode
     let sum = 0;
@@ -26,6 +35,7 @@ export function countFor(habit) {
 
 // Did the habit meet its goal on a given date (for streak scoring)?
 export function metOn(habit, dateKey) {
+  if (isStack(habit)) return stackMet(habit, dateKey);
   const v = S.habitLog[dateKey]?.[habit.id];
   if (v == null || v === false) return false;
   if (typeof v === 'boolean') return v === true;

@@ -27,6 +27,9 @@ function currentBlock() {
 
 function habitDoneToday(h) { return metOn(h, today()); }
 
+const stackOpen = {};
+export function toggleStackOpen(id) { stackOpen[id] = !stackOpen[id]; renderDash(); }
+
 export function renderDash() {
   const d = new Date(), hr = d.getHours();
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -247,13 +250,22 @@ export function renderTimeblocks() {
           const v = bhLog[h.id];
           const checkClass = v === 'avoided' ? 'done' : v === 'indulged' ? 'indulged' : '';
           const checkChar = v === 'avoided' ? '✓' : v === 'indulged' ? '✕' : '·';
-          const streak = window.calcStreak?.(h.id) ?? 0;
-          const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Avoided streak">🔥${streak}</span>` : '';
-          return `<div class="timeblock-item" onclick="openBadHabitLog('${h.id}')"><div class="tb-check ${checkClass}">${checkChar}</div><span style="flex:1">${h.icon || '🚫'} ${h.name}</span>${wkChip}${streakChip}<span class="badge badge-rose" style="font-size:10px">bad</span></div>`;
+          return `<div class="timeblock-item" onclick="openBadHabitLog('${h.id}')"><div class="tb-check ${checkClass}">${checkChar}</div><span style="flex:1">${h.icon || '🚫'} ${h.name}</span>${wkChip}<span class="badge badge-rose" style="font-size:10px">bad</span></div>`;
         }
-        const streak = window.calcStreak?.(h.id) ?? 0;
-        const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Streak">🔥${streak}</span>` : '';
-        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}${streakChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
+        if (h.isStack) {
+          const open = !!stackOpen[h.id];
+          const chev = open ? '▾' : '▸';
+          const done = habitDoneToday(h);
+          const parentRow = `<div class="timeblock-item" onclick="toggleStackOpen('${h.id}')"><div class="tb-check ${done ? 'done' : ''}" style="cursor:pointer">${chev}</div><span style="flex:1">${h.icon || '🔗'} ${h.name}</span>${wkChip}<span class="badge badge-violet" style="font-size:10px">stack</span></div>`;
+          if (!open) return parentRow;
+          const kids = (h.children || []).map(c => {
+            const cdone = habitDoneToday(c);
+            const cIcon = c.icon || (c.kind === 'bad' ? '🚫' : '●');
+            return `<div class="timeblock-item" style="margin-left:18px;border-left:2px solid var(--border)" onclick="toggleHabitDash('${c.id}')"><div class="tb-check ${cdone ? 'done' : ''}">✓</div><span style="flex:1;font-size:13px">${cIcon} ${c.name}</span></div>`;
+          }).join('');
+          return parentRow + kids;
+        }
+        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
       }),
       ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${S.choreLog[effectivePeriodKey(c)]?.[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
       ...bT.map(t => `<div class="timeblock-item" onclick="toggleTaskQuick('${t.id}')"><div class="tb-check">✓</div><span style="flex:1">📋 ${t.name}</span><span class="badge badge-${t.priority === 'high' ? 'rose' : t.priority === 'medium' ? 'gold' : 'green'}" style="font-size:10px">${t.priority}</span></div>`)
@@ -262,8 +274,20 @@ export function renderTimeblocks() {
   }).join('');
 }
 
+function findHabitOrChild(id) {
+  let h = S.habits.find(x => x.id === id);
+  if (h) return h;
+  for (const p of S.habits) {
+    if (p.isStack && Array.isArray(p.children)) {
+      const c = p.children.find(x => x.id === id);
+      if (c) return c;
+    }
+  }
+  return null;
+}
+
 export function toggleHabitDash(id) {
-  const h = S.habits.find(x => x.id === id);
+  const h = findHabitOrChild(id);
   if (h?.kind === 'bad') return openBadHabitLog(id);
   // Linked habits jump to their tool with the saved config — same behaviour as
   // tapping them on the Habits page.
@@ -361,6 +385,7 @@ window.dashUpNextClick = dashUpNextClick;
 window.dashStartPreset = dashStartPreset;
 window.toggleHabitDash = toggleHabitDash;
 window.toggleChoreDash = toggleChoreDash;
+window.toggleStackOpen = toggleStackOpen;
 window.toggleTaskQuick = toggleTaskQuick;
 window.openBH = openBH;
 window.openBadHabitLog = openBadHabitLog;

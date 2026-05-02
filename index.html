@@ -230,6 +230,18 @@ Review with team | low | | first pass only"></textarea></div>
   <div class="modal-title" id="m-habit-title">Add Habit</div>
   <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
 
+  <div class="form-row" style="margin-bottom:6px">
+    <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:normal">
+      <input type="checkbox" id="habit-is-stack" onchange="toggleHabitStackFields('habit-')">
+      <span>🧩 This is a habit stack (chain multiple habits — all must be completed)</span>
+    </label>
+  </div>
+  <div id="habit-habit-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Add nested habits in order. Each can be good/bad and binary/counter. The stack only counts as completed when every child is done.</div>
+    <div id="habit-habit-stack-children"></div>
+    <button type="button" class="btn btn-sm" onclick="addHabitStackChild('habit-')">+ Add child habit</button>
+  </div>
+
   <div class="form-row"><label>Kind</label><select id="habit-kind" onchange="updateHabitKindFields()">
     <option value="good">✅ Good habit (build it up)</option>
     <option value="bad">🚫 Bad habit (avoid it)</option>
@@ -497,7 +509,6 @@ Review with team | low | | first pass only"></textarea></div>
     <select id="qc-type" onchange="qcUpdateFields()">
       <option value="task">📋 Create a task</option>
       <option value="habit">✅ Create a habit</option>
-      <option value="habit-tick">☑️ Tick an existing habit</option>
       <option value="journal">📓 Journal note</option>
       <option value="shop">🛒 Shopping item</option>
     </select>
@@ -509,11 +520,30 @@ Review with team | low | | first pass only"></textarea></div>
       <div class="form-row"><label>Due</label><input type="date" id="qc-task-due"></div>
     </div>
   </div>
-  <div id="qc-habit-tick-fields" style="display:none">
-    <div class="form-row"><label>Habit</label><select id="qc-habit-sel"></select></div>
-  </div>
   <div id="qc-habit-fields" style="display:none">
     <div class="form-row"><label>Habit name</label><input type="text" id="qc-habit-name" placeholder="e.g. Drink water" autocapitalize="sentences"></div>
+    <div class="form-row" style="margin-bottom:6px">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:normal">
+        <input type="checkbox" id="qc-habit-is-stack" onchange="toggleHabitStackFields('qc-')">
+        <span>🧩 This is a habit stack (chain multiple habits)</span>
+      </label>
+    </div>
+    <div id="qc-habit-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">All nested habits must be completed for the stack to count.</div>
+      <div id="qc-habit-stack-children"></div>
+      <button type="button" class="btn btn-sm" onclick="addHabitStackChild('qc-')">+ Add child habit</button>
+    </div>
+    <div class="form-row"><label>🔗 Create a linked habit</label>
+      <select id="qc-habit-link-type">
+        <option value="">— None (regular habit) —</option>
+        <option value="meditate">🧘 Meditate</option>
+        <option value="train">🏋️ Train</option>
+        <option value="deepwork">🧠 Deep work</option>
+        <option value="sleep">😴 Sleep log</option>
+        <option value="journal">📓 Journal</option>
+        <option value="weight">⚖️ Weight log</option>
+      </select>
+    </div>
     <div class="form-grid">
       <div class="form-row"><label>Kind</label><select id="qc-habit-kind">
         <option value="good">✅ Good (build)</option>

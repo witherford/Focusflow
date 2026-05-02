@@ -22,6 +22,7 @@ import {
   streakGoalTarget,
 } from './streaks.js';
 import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
+import { resetStackChildren, readStackChildren, populateStackChildren, toggleHabitStackFields } from './stackForm.js';
 
 // Re-export the helpers main.js / other features import from here so existing
 // import paths (`features/habits/page.js`) keep working.
@@ -107,16 +108,27 @@ function renderHabitCard(h, { flat = false } = {}) {
   // Gestures attach to .habit-tap (the inner zone), NOT the row. Edit/delete
   // buttons live as siblings of .habit-tap, so pointer events on a button
   // physically cannot bubble into the gesture handler.
+  const stackChildren = h.isStack && Array.isArray(h.children) && h.children.length
+    ? `<div class="stack-children" style="margin:6px 0 4px 14px;padding-left:10px;border-left:2px solid var(--border)">${
+        h.children.map(c => {
+          const cdone = doneToday(c);
+          const cIcon = c.icon || (c.kind === 'bad' ? '🚫' : '●');
+          return `<div class="stack-child" onclick="event.stopPropagation();toggleHabit('${c.id}')" style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px"><div class="tb-check ${cdone ? 'done' : ''}" style="width:18px;height:18px;line-height:18px;font-size:11px">${cdone ? '✓' : '·'}</div><span style="flex:1">${cIcon} ${c.name}</span><span style="font-size:10px;color:var(--text3)">${c.mode === 'counter' ? 'counter' : 'binary'}${c.kind === 'bad' ? ' · bad' : ''}</span></div>`;
+        }).join('')
+      }</div>`
+    : '';
+  const stackBadge = h.isStack ? ' <span class="mode-chip">stack</span>' : '';
   return `<div class="habit-row${done ? ' done' : ''}" data-habit-id="${h.id}">
     <div class="habit-tap">
       ${ring}
       <div class="habit-info">
-        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${linkBadge}${xpChip}</div>
+        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${stackBadge}${linkBadge}${xpChip}</div>
         <div class="habit-meta">${meta}</div>
       </div>
       ${blockBadge}
       ${streakStatusBadge(h)}
     </div>
+    ${stackChildren}
     <button class="btn-icon" data-habit-action="edit" data-id="${h.id}" aria-label="Edit habit">✏️</button>
     <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}" aria-label="Delete habit">✕</button>
   </div>`;
@@ -151,6 +163,9 @@ function wireGestures(container) {
 }
 
 function handleTap(h) {
+  // Stack parents are not directly toggleable — completion is derived from
+  // children. Tapping the row is a no-op (user taps the children to tick).
+  if (h.isStack) return;
   // Linked habits route to their tool with the saved config pre-applied.
   // Double-tap / triple-tap / long-press still let the user manually override.
   if (h.linkedType) { openLinkedHabit(h); return; }
@@ -275,9 +290,18 @@ function renderHabitTemplateChips() {
   return tmpl.map((t, i) => `<button class="btn btn-sm" onclick="_applyHabitTemplateByIdx(${i})">${t.icon} ${t.name}</button>`).join('');
 }
 
+// Find a habit by id, walking into stack children too.
+function findHabit(id) {
+  let h = S.habits.find(x => x.id === id); if (h) return h;
+  for (const p of S.habits) if (p.isStack && Array.isArray(p.children)) {
+    const c = p.children.find(x => x.id === id); if (c) return c;
+  }
+  return null;
+}
+
 // Binary toggle (legacy) — kept for dashboard toggle + non-gesture callers.
 export function toggleHabit(id) {
-  const h = S.habits.find(x => x.id === id); if (!h) return;
+  const h = findHabit(id); if (!h) return;
   if (isCounter(h)) { handleTap(h); return; }
   if (!S.habitLog[today()]) S.habitLog[today()] = {};
   const nowOn = !S.habitLog[today()][id];
@@ -375,6 +399,9 @@ export function openAddHabit() {
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = '';
   setWeekdayPickerValue(null);
   populateHabitGoalSelect('');
+  const stkCB = document.getElementById('habit-is-stack'); if (stkCB) stkCB.checked = false;
+  resetStackChildren('habit-');
+  toggleHabitStackFields('habit-');
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
@@ -412,6 +439,10 @@ export function openEditHabit(id) {
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = h.streakGoalDays ?? '';
   setWeekdayPickerValue(h.activeDays);
   populateHabitGoalSelect(h.goalId || '');
+  const stkCB = document.getElementById('habit-is-stack'); if (stkCB) stkCB.checked = !!h.isStack;
+  if (h.isStack) populateStackChildren('habit-', h.children || []);
+  else resetStackChildren('habit-');
+  toggleHabitStackFields('habit-');
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
@@ -508,6 +539,19 @@ export function saveHabit() {
     data.cumulative = cumulative;
   } else {
     delete data.target; delete data.unit; delete data.incrementStep; delete data.cumulative;
+  }
+  const isStackChecked = !!document.getElementById('habit-is-stack')?.checked;
+  if (isStackChecked) {
+    data.isStack = true;
+    data.children = readStackChildren('habit-');
+    data.mode = 'binary';
+    data.linkedType = null;
+    data.linkedConfig = null;
+    delete data.target; delete data.unit; delete data.incrementStep; delete data.cumulative;
+    data.streakGoalMode = null; data.streakGoalDays = null;
+  } else {
+    data.isStack = false;
+    data.children = null;
   }
   if (editId) { const h = S.habits.find(x => x.id === editId); if (h) Object.assign(h, data); }
   else S.habits.push({ id: uid(), ...data });
