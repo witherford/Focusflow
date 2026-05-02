@@ -29,6 +29,7 @@ export function openQuickCapture() {
   const stk = document.getElementById('qc-is-stack'); if (stk) stk.checked = false;
   const stkW = document.getElementById('qc-stack-fields'); if (stkW) stkW.style.display = 'none';
   resetStackChildren('qc-');
+  window.populateDuplicateFromSelect?.('qc-');
   qcUpdateFields();
   const modal = document.getElementById('m-quick-capture'); if (modal) modal.style.display = 'flex';
   setTimeout(() => document.getElementById('qc-task-name')?.focus(), 60);

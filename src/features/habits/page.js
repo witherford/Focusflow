@@ -22,7 +22,7 @@ import {
   streakGoalTarget,
 } from './streaks.js';
 import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
-import { resetStackChildren, readStackChildren, populateStackChildren, toggleHabitStackFields, isHabitInAnyStack, resolveChild } from './stackForm.js';
+import { resetStackChildren, readStackChildren, populateStackChildren, toggleHabitStackFields, isHabitInAnyStack, resolveChild, consumeChildCreationContext, isInChildCreation, resumeParentAfterChildSave } from './stackForm.js';
 
 // Re-export the helpers main.js / other features import from here so existing
 // import paths (`features/habits/page.js`) keep working.
@@ -375,6 +375,75 @@ export function updateLinkedHabitFields() {
   }
 }
 
+export function populateDuplicateFromSelect(prefix = 'habit-') {
+  const sel = document.getElementById(prefix + 'duplicate-from'); if (!sel) return;
+  const editId = prefix === 'habit-' ? (document.getElementById('habit-edit-id')?.value || '') : '';
+  const opts = (S.habits || [])
+    .filter(h => h.id !== editId)
+    .map(h => `<option value="${h.id}">${h.icon || '●'} ${h.name}${h.isStack ? ' 🧩' : ''}</option>`)
+    .join('');
+  sel.innerHTML = '<option value="">— don’t duplicate —</option>' + opts;
+  sel.value = '';
+}
+
+// Apply the chosen source habit's settings into the open form. The user can
+// then tweak fields before saving. The new habit always starts fresh — it
+// gets a new id (editId stays '') so streak / completion / history don't
+// transfer.
+export function duplicateFromHabit(prefix = 'habit-') {
+  const sel = document.getElementById(prefix + 'duplicate-from'); if (!sel) return;
+  const id = sel.value; if (!id) return;
+  const src = S.habits.find(h => h.id === id); if (!src) return;
+  const suffix = ' (copy)';
+  if (prefix === 'habit-') {
+    document.getElementById('habit-edit-id').value = '';
+    document.getElementById('m-habit-title').textContent = 'Add Habit (duplicating)';
+    document.getElementById('habit-name').value = (src.name || '') + suffix;
+    document.getElementById('habit-icon').value = src.icon || '';
+    const kindSel = document.getElementById('habit-kind'); if (kindSel) kindSel.value = src.kind === 'bad' ? 'bad' : 'good';
+    document.getElementById('habit-block').value = src.block || 'morning';
+    const modeSel = document.getElementById('habit-mode'); if (modeSel) modeSel.value = src.mode || 'binary';
+    const targetEl = document.getElementById('habit-target'); if (targetEl) targetEl.value = src.target ?? '';
+    const unitEl = document.getElementById('habit-unit'); if (unitEl) unitEl.value = src.unit || '';
+    const stepEl = document.getElementById('habit-step'); if (stepEl) stepEl.value = src.incrementStep ?? '';
+    const cumEl = document.getElementById('habit-cumulative'); if (cumEl) cumEl.checked = !!src.cumulative;
+    const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = src.journalPrompt !== false;
+    const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = !!src.allDay;
+    const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = src.whyMatters || '';
+    const lt = document.getElementById('habit-link-type'); if (lt) lt.value = src.linkedType || '';
+    const lc = src.linkedConfig || {};
+    const lmd = document.getElementById('linked-med-dur'); if (lmd) lmd.value = lc.duration ?? 10;
+    const lms = document.getElementById('linked-med-sound'); if (lms) lms.value = lc.sound || '';
+    populateLinkedGuidedSelect(lc.guidedScriptId || '');
+    const ldw = document.getElementById('linked-dw-work'); if (ldw) ldw.value = lc.mins ?? 25;
+    const ldb = document.getElementById('linked-dw-break'); if (ldb) ldb.value = lc.breakMins ?? 5;
+    const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
+    const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = lc.targetHrs ?? '';
+    const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = lc.prompt || '';
+    const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = src.streakGoalMode || '';
+    const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = src.streakGoalDays ?? '';
+    setWeekdayPickerValue(src.activeDays);
+    populateHabitGoalSelect(src.goalId || '');
+    // Duplicating always creates a non-stack child by default — the user can
+    // re-enable stack mode and re-pick children if they want. Streak / log /
+    // history are intentionally not copied.
+    const stkCB = document.getElementById('habit-is-stack'); if (stkCB) stkCB.checked = false;
+    resetStackChildren('habit-');
+    toggleHabitStackFields('habit-');
+    toggleCounterFields();
+    updateLinkedHabitFields();
+    updateHabitGoalFields();
+    updateHabitKindFields();
+  } else if (prefix === 'qc-') {
+    document.getElementById('qc-habit-name').value = (src.name || '') + suffix;
+    const k = document.getElementById('qc-habit-kind'); if (k) k.value = src.kind === 'bad' ? 'bad' : 'good';
+    const b = document.getElementById('qc-habit-block'); if (b) b.value = src.block || 'morning';
+    const i = document.getElementById('qc-habit-icon'); if (i) i.value = src.icon || '';
+    const m = document.getElementById('qc-habit-mode'); if (m) m.value = src.mode || 'binary';
+    const lt = document.getElementById('qc-habit-link-type'); if (lt) lt.value = src.linkedType || '';
+  }
+}
+
 export function openAddHabit() {
   document.getElementById('m-habit-title').textContent = 'Add Habit';
   document.getElementById('habit-edit-id').value = '';
@@ -405,6 +474,8 @@ export function openAddHabit() {
   const stkCB = document.getElementById('habit-is-stack'); if (stkCB) stkCB.checked = false;
   resetStackChildren('habit-');
   toggleHabitStackFields('habit-');
+  populateDuplicateFromSelect('habit-');
+  const dupRow = document.getElementById('habit-duplicate-row'); if (dupRow) dupRow.style.display = '';
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
@@ -446,6 +517,10 @@ export function openEditHabit(id) {
   if (h.isStack) populateStackChildren('habit-', h.children || []);
   else resetStackChildren('habit-');
   toggleHabitStackFields('habit-');
+  // Hide the duplicate-from row when editing — duplication only makes sense
+  // for new habits.
+  const dupRow = document.getElementById('habit-duplicate-row');
+  if (dupRow) dupRow.style.display = 'none';
   toggleCounterFields();
   updateLinkedHabitFields();
   updateHabitGoalFields();
@@ -556,9 +631,20 @@ export function saveHabit() {
     data.isStack = false;
     data.children = null;
   }
+  let savedId = editId;
   if (editId) { const h = S.habits.find(x => x.id === editId); if (h) Object.assign(h, data); }
-  else S.habits.push({ id: uid(), ...data });
-  save(); window.closeModal('m-habit'); renderHabitsToday(); renderHabitsAll();
+  else { savedId = uid(); S.habits.push({ id: savedId, ...data }); }
+  save();
+  // If we're inside the "Create new habit to add to stack" flow, don't close
+  // the modal — resume the parent stack form with the new habit appended.
+  if (isInChildCreation()) {
+    const ctx = consumeChildCreationContext();
+    document.getElementById('habit-cancel-child-link')?.remove();
+    resumeParentAfterChildSave(ctx, savedId);
+    renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
+    return;
+  }
+  window.closeModal('m-habit'); renderHabitsToday(); renderHabitsAll();
 }
 
 export function deleteHabit(id) {
@@ -595,3 +681,5 @@ window.openLinkedHabit = openLinkedHabit;
 window.markHabitDoneFromFlow = markHabitDoneFromFlow;
 window.applyUnitPreset = applyUnitPreset;
 window.doneToday = doneToday;
+window.duplicateFromHabit = duplicateFromHabit;
+window.populateDuplicateFromSelect = populateDuplicateFromSelect;

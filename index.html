@@ -228,6 +228,10 @@ Review with team | low | | first pass only"></textarea></div>
 <div class="modal-overlay" id="m-habit" style="display:none"><div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="m-habit-title">Add Habit</div>
+  <div class="form-row" id="habit-duplicate-row"><label>Duplicate from existing habit (optional)</label>
+    <select id="habit-duplicate-from" onchange="duplicateFromHabit('habit-')"></select>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">Picks an existing habit's settings as a starting point. The new habit starts with a fresh streak / completion / history.</div>
+  </div>
   <div class="form-row"><label>Name</label><input type="text" id="habit-name" autocapitalize="sentences" enterkeyhint="done"></div>
 
   <div class="form-row"><label>Kind</label><select id="habit-kind" onchange="updateHabitKindFields()">
@@ -251,7 +255,7 @@ Review with team | low | | first pass only"></textarea></div>
       </div>
     </div>
     <div id="habit-stack-list" style="margin-top:6px"></div>
-    <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick existing habits and chain them in order. The stack only counts as completed when every habit in it is done.</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick an existing habit from the dropdown <em>or</em> choose <strong>+ Create a new habit</strong> to add a brand-new one. Chain them in order — the stack only counts as completed when every habit in it is done.</div>
   </div>
 
   <div class="form-row"><label>🔗 Create a linked habit</label><select id="habit-link-type" onchange="updateLinkedHabitFields()">
@@ -527,6 +531,10 @@ Review with team | low | | first pass only"></textarea></div>
     </div>
   </div>
   <div id="qc-habit-fields" style="display:none">
+    <div class="form-row" id="qc-habit-duplicate-row"><label>Duplicate from existing habit (optional)</label>
+      <select id="qc-duplicate-from" onchange="duplicateFromHabit('qc-')"></select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Starts from an existing habit's settings. Streak / history reset.</div>
+    </div>
     <div class="form-row"><label>Habit name</label><input type="text" id="qc-habit-name" placeholder="e.g. Drink water" autocapitalize="sentences"></div>
     <div class="form-row" style="margin-bottom:6px">
       <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:normal">
@@ -543,7 +551,7 @@ Review with team | low | | first pass only"></textarea></div>
         </div>
       </div>
       <div id="qc-stack-list" style="margin-top:6px"></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick habits and chain them in order. Stack completes when every chosen habit is done.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick an existing habit <em>or</em> choose <strong>+ Create a new habit</strong> to add a brand-new one. Chain them in order — stack completes when every habit is done.</div>
     </div>
     <div class="form-row"><label>🔗 Create a linked habit</label>
       <select id="qc-habit-link-type">
