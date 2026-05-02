@@ -242,15 +242,15 @@ Review with team | low | | first pass only"></textarea></div>
       <span>🧩 This is a habit stack (chain multiple habits — all must be completed)</span>
     </label>
   </div>
-  <div id="habit-habit-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+  <div id="habit-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
     <div class="form-row" style="margin-bottom:6px">
       <label>Add habit to stack</label>
       <div style="display:flex;gap:6px">
-        <select id="habit-habit-stack-picker" style="flex:1;min-width:0"></select>
+        <select id="habit-stack-picker" style="flex:1;min-width:0"></select>
         <button type="button" class="btn btn-sm" onclick="addHabitStackChild('habit-')" title="Add to stack" style="padding:6px 12px;font-weight:600">+</button>
       </div>
     </div>
-    <div id="habit-habit-stack-list" style="margin-top:6px"></div>
+    <div id="habit-stack-list" style="margin-top:6px"></div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick existing habits and chain them in order. The stack only counts as completed when every habit in it is done.</div>
   </div>
 
@@ -530,19 +530,19 @@ Review with team | low | | first pass only"></textarea></div>
     <div class="form-row"><label>Habit name</label><input type="text" id="qc-habit-name" placeholder="e.g. Drink water" autocapitalize="sentences"></div>
     <div class="form-row" style="margin-bottom:6px">
       <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:normal">
-        <input type="checkbox" id="qc-habit-is-stack" onchange="toggleHabitStackFields('qc-')">
+        <input type="checkbox" id="qc-is-stack" onchange="toggleHabitStackFields('qc-')">
         <span>🧩 This is a habit stack (chain multiple habits)</span>
       </label>
     </div>
-    <div id="qc-habit-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div id="qc-stack-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
       <div class="form-row" style="margin-bottom:6px">
         <label>Add habit to stack</label>
         <div style="display:flex;gap:6px">
-          <select id="qc-habit-stack-picker" style="flex:1;min-width:0"></select>
+          <select id="qc-stack-picker" style="flex:1;min-width:0"></select>
           <button type="button" class="btn btn-sm" onclick="addHabitStackChild('qc-')" title="Add to stack" style="padding:6px 12px;font-weight:600">+</button>
         </div>
       </div>
-      <div id="qc-habit-stack-list" style="margin-top:6px"></div>
+      <div id="qc-stack-list" style="margin-top:6px"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px">Pick habits and chain them in order. Stack completes when every chosen habit is done.</div>
     </div>
     <div class="form-row"><label>🔗 Create a linked habit</label>

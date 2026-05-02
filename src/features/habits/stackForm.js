@@ -8,8 +8,10 @@ import { S } from '../../core/state.js';
 
 const editing = { 'habit-': [], 'qc-': [] };
 
-function pickerId(prefix)   { return prefix + 'habit-stack-picker'; }
-function listId(prefix)     { return prefix + 'habit-stack-list'; }
+function pickerId(prefix) { return prefix + 'stack-picker'; }
+function listId(prefix)   { return prefix + 'stack-list'; }
+function cbId(prefix)     { return prefix + 'is-stack'; }
+function wrapId(prefix)   { return prefix + 'stack-fields'; }
 
 export function resolveChild(c) {
   if (!c) return null;
@@ -101,8 +103,8 @@ export function populateStackChildren(prefix = 'habit-', children) {
 }
 
 export function toggleHabitStackFields(prefix = 'habit-') {
-  const cb = document.getElementById(prefix + 'habit-is-stack');
-  const wrap = document.getElementById(prefix + 'habit-stack-fields');
+  const cb = document.getElementById(cbId(prefix));
+  const wrap = document.getElementById(wrapId(prefix));
   if (!cb || !wrap) return;
   const on = cb.checked;
   wrap.style.display = on ? '' : 'none';

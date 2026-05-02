@@ -26,8 +26,8 @@ export function openQuickCapture() {
   const b = document.getElementById('qc-habit-block'); if (b) b.value = 'morning';
   const m = document.getElementById('qc-habit-mode'); if (m) m.value = 'binary';
   const lt = document.getElementById('qc-habit-link-type'); if (lt) lt.value = '';
-  const stk = document.getElementById('qc-habit-is-stack'); if (stk) stk.checked = false;
-  const stkW = document.getElementById('qc-habit-stack-fields'); if (stkW) stkW.style.display = 'none';
+  const stk = document.getElementById('qc-is-stack'); if (stk) stk.checked = false;
+  const stkW = document.getElementById('qc-stack-fields'); if (stkW) stkW.style.display = 'none';
   resetStackChildren('qc-');
   qcUpdateFields();
   const modal = document.getElementById('m-quick-capture'); if (modal) modal.style.display = 'flex';
@@ -58,7 +58,7 @@ export function saveQuickCapture() {
     const kind = document.getElementById('qc-habit-kind')?.value === 'bad' ? 'bad' : 'good';
     const block = document.getElementById('qc-habit-block')?.value || 'morning';
     const linkedType = document.getElementById('qc-habit-link-type')?.value || null;
-    const isStack = !!document.getElementById('qc-habit-is-stack')?.checked;
+    const isStack = !!document.getElementById('qc-is-stack')?.checked;
     const userIcon = document.getElementById('qc-habit-icon')?.value;
     const icon = userIcon || (kind === 'bad' ? '🚫' : (linkedType ? LINKED_ICON[linkedType] : (isStack ? '🧩' : '●')));
     let mode = kind === 'bad' ? 'binary' : (document.getElementById('qc-habit-mode')?.value || 'binary');
