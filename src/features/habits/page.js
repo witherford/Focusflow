@@ -22,7 +22,7 @@ import {
   streakGoalTarget,
 } from './streaks.js';
 import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
-import { resetStackChildren, readStackChildren, populateStackChildren, toggleHabitStackFields } from './stackForm.js';
+import { resetStackChildren, readStackChildren, populateStackChildren, toggleHabitStackFields, isHabitInAnyStack, resolveChild } from './stackForm.js';
 
 // Re-export the helpers main.js / other features import from here so existing
 // import paths (`features/habits/page.js`) keep working.
@@ -111,9 +111,10 @@ function renderHabitCard(h, { flat = false } = {}) {
   const stackChildren = h.isStack && Array.isArray(h.children) && h.children.length
     ? `<div class="stack-children" style="margin:6px 0 4px 14px;padding-left:10px;border-left:2px solid var(--border)">${
         h.children.map(c => {
-          const cdone = doneToday(c);
-          const cIcon = c.icon || (c.kind === 'bad' ? '🚫' : '●');
-          return `<div class="stack-child" onclick="event.stopPropagation();toggleHabit('${c.id}')" style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px"><div class="tb-check ${cdone ? 'done' : ''}" style="width:18px;height:18px;line-height:18px;font-size:11px">${cdone ? '✓' : '·'}</div><span style="flex:1">${cIcon} ${c.name}</span><span style="font-size:10px;color:var(--text3)">${c.mode === 'counter' ? 'counter' : 'binary'}${c.kind === 'bad' ? ' · bad' : ''}</span></div>`;
+          const child = resolveChild(c); if (!child) return '';
+          const cdone = doneToday(child);
+          const cIcon = child.icon || (child.kind === 'bad' ? '🚫' : '●');
+          return `<div class="stack-child" onclick="event.stopPropagation();toggleHabit('${child.id}')" style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px"><div class="tb-check ${cdone ? 'done' : ''}" style="width:18px;height:18px;line-height:18px;font-size:11px">${cdone ? '✓' : '·'}</div><span style="flex:1">${cIcon} ${child.name}</span><span style="font-size:10px;color:var(--text3)">${child.mode === 'counter' ? 'counter' : 'binary'}${child.kind === 'bad' ? ' · bad' : ''}</span></div>`;
         }).join('')
       }</div>`
     : '';
@@ -211,6 +212,7 @@ function handleLongPress(h) {
 // Also filters out habits whose activeDays don't include today.
 function habitInBlock(h, block) {
   if (!isHabitActiveToday(h)) return false;
+  if (isHabitInAnyStack(h.id)) return false;
   if (block === 'allday') return h.block === 'allday' || h.allDay === true;
   if (h.allDay === true) return false;
   return h.block === block;
@@ -267,8 +269,9 @@ export function renderHabitsToday() {
 
 export function renderHabitsAll() {
   const el = document.getElementById('h-all-list'); if (!el) return;
-  if (S.habits.length) {
-    el.innerHTML = S.habits.map(h => renderHabitCard(h, { flat: true })).join('');
+  const flatList = S.habits.filter(h => !isHabitInAnyStack(h.id));
+  if (flatList.length) {
+    el.innerHTML = flatList.map(h => renderHabitCard(h, { flat: true })).join('');
   } else {
     el.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><div class="es-title">No habits yet</div><div class="es-sub">Pick a starter or craft your own</div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:420px;margin:0 auto">${renderHabitTemplateChips()}</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="openAddHabit()">+ Custom habit</button></div></div>`;
   }
@@ -520,7 +523,7 @@ export function saveHabit() {
     name,
     kind,
     block: document.getElementById('habit-block').value,
-    icon: document.getElementById('habit-icon').value || (kind === 'bad' ? '🚫' : (linkedIconMap[linkedType] || '●')),
+    icon: document.getElementById('habit-icon').value || (kind === 'bad' ? '🚫' : (linkedIconMap[linkedType] || (document.getElementById('habit-is-stack')?.checked ? '🧩' : '●'))),
     mode: kind === 'bad' ? 'binary' : effectiveMode,
     journalPrompt,
     goalId,

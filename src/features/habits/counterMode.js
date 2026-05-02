@@ -10,16 +10,29 @@ export function isCumulative(habit) { return habit?.cumulative === true; }
 
 export function isStack(habit) { return !!habit?.isStack && Array.isArray(habit?.children); }
 
+// Resolve a stack child entry (id-string or legacy embedded object) to a
+// habit-shaped object that metOn / countFor can consume.
+function resolveStackChild(c) {
+  if (!c) return null;
+  if (typeof c === 'string') return S.habits.find(h => h.id === c) || null;
+  return c;
+}
+
 // True when every child of a stack is met on the given date.
 export function stackMet(parent, dateKey) {
   if (!isStack(parent) || !parent.children.length) return false;
-  return parent.children.every(c => metOn(c, dateKey));
+  return parent.children.every(c => {
+    const h = resolveStackChild(c);
+    return h ? metOn(h, dateKey) : false;
+  });
 }
 
 // Current count for a habit (today for daily counter; total for cumulative).
 export function countFor(habit) {
   if (!habit) return 0;
-  if (isStack(habit)) return habit.children.filter(c => metOn(c, today())).length;
+  if (isStack(habit)) return habit.children.filter(c => {
+    const h = resolveStackChild(c); return h && metOn(h, today());
+  }).length;
   if (isCumulative(habit)) {
     // Sum all days for cumulative mode
     let sum = 0;

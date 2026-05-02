@@ -6,6 +6,7 @@ import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { metOn } from '../habits/counterMode.js';
 import { effectivePeriodKey } from '../chores/period.js';
 import { isHabitActiveToday, weeklyCompletion } from '../habits/page.js';
+import { isHabitInAnyStack, resolveChild } from '../habits/stackForm.js';
 import { renderWakeCard, renderBedCard } from '../sleepHabit/page.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
 import { renderAllDay } from './allDay.js';
@@ -237,7 +238,7 @@ export function renderTimeblocks() {
   const el = document.getElementById('dash-timeblocks'); if (!el) return;
   const bhLog = S.badHabitLog?.[today()] || {};
   el.innerHTML = blocks.map(b => {
-    const bH = S.habits.filter(h => h.block === b.id && isHabitActiveToday(h));
+    const bH = S.habits.filter(h => h.block === b.id && isHabitActiveToday(h) && !isHabitInAnyStack(h.id));
     const bC = b.id === 'morning' ? S.chores.filter(c => c.day === todayDay) : [];
     const bT = b.id === 'morning' ? S.tasks.filter(t => !t.done && !t.parentId && t.due === today()) : [];
     const items = [
@@ -259,9 +260,11 @@ export function renderTimeblocks() {
           const parentRow = `<div class="timeblock-item" onclick="toggleStackOpen('${h.id}')"><div class="tb-check ${done ? 'done' : ''}" style="cursor:pointer">${chev}</div><span style="flex:1">${h.icon || '🔗'} ${h.name}</span>${wkChip}<span class="badge badge-violet" style="font-size:10px">stack</span></div>`;
           if (!open) return parentRow;
           const kids = (h.children || []).map(c => {
-            const cdone = habitDoneToday(c);
-            const cIcon = c.icon || (c.kind === 'bad' ? '🚫' : '●');
-            return `<div class="timeblock-item" style="margin-left:18px;border-left:2px solid var(--border)" onclick="toggleHabitDash('${c.id}')"><div class="tb-check ${cdone ? 'done' : ''}">✓</div><span style="flex:1;font-size:13px">${cIcon} ${c.name}</span></div>`;
+            const child = resolveChild(c);
+            if (!child) return '';
+            const cdone = habitDoneToday(child);
+            const cIcon = child.icon || (child.kind === 'bad' ? '🚫' : '●');
+            return `<div class="timeblock-item" style="margin-left:18px;border-left:2px solid var(--border)" onclick="toggleHabitDash('${child.id}')"><div class="tb-check ${cdone ? 'done' : ''}">✓</div><span style="flex:1;font-size:13px">${cIcon} ${child.name}</span></div>`;
           }).join('');
           return parentRow + kids;
         }
