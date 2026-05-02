@@ -70,6 +70,35 @@ export function calcBadStreak(h) {
   return streak;
 }
 
+// Weekly completion for a habit — Mon→Sun. Returns { done, target } where
+// target = number of active weekdays for the habit (defaults to 7).
+export function weeklyCompletion(habitId) {
+  const h = S.habits.find(x => x.id === habitId); if (!h) return { done: 0, target: 7 };
+  // UTC-ISO keys to match S.habitLog convention. Walk from Monday → today.
+  const todayK = new Date().toISOString().split('T')[0];
+  const todayDow = new Date(todayK + 'T00:00:00Z').getUTCDay();
+  const daysSinceMon = todayDow === 0 ? 6 : todayDow - 1;
+  const dayShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const activeDays = Array.isArray(h.activeDays) && h.activeDays.length ? h.activeDays : null;
+  let target = 0, done = 0;
+  for (let off = 0; off <= 6; off++) {
+    const back = daysSinceMon - off; // off=0 → Monday (back=daysSinceMon)
+    const inFuture = back < 0;       // future days this week — count toward target only
+    const k = new Date(Date.now() - Math.max(0, back) * 864e5).toISOString().split('T')[0];
+    const dow = dayShort[(off + 1) % 7]; // off=0 → Mon, off=6 → Sun
+    if (activeDays && !activeDays.includes(dow)) continue;
+    target++;
+    if (inFuture) continue;
+    if (h.kind === 'bad') {
+      if ((S.badHabitLog || {})[k]?.[h.id] === 'avoided') done++;
+    } else {
+      if (metOn(h, k)) done++;
+    }
+  }
+  if (!target) target = 7;
+  return { done, target };
+}
+
 export function renderHabitHeatmap() {
   window.renderHM('heatmap-grid', parseInt(document.getElementById('hm-months')?.value || 1) * 30, k => {
     const total = S.habits.length;

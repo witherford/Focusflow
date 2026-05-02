@@ -18,6 +18,7 @@ import {
   calcStreak,
   calcBadStreak,
   renderHabitHeatmap,
+  weeklyCompletion,
 } from './streaks.js';
 import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
 
@@ -35,6 +36,7 @@ export {
   calcStreak,
   calcBadStreak,
   renderHabitHeatmap,
+  weeklyCompletion,
 } from './streaks.js';
 export { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
 
@@ -66,10 +68,15 @@ function renderHabitCard(h, { flat = false } = {}) {
   const done = doneToday(h);
   const pct = counter && target > 0 ? Math.min(100, Math.round(count / target * 100)) : (done ? 100 : 0);
   const streak = calcStreak(h.id);
+  const wk = weeklyCompletion(h.id);
   const meta = counter
-    ? `${count}${isCumulative(h) ? '' : '/' + target}${h.unit ? ' ' + h.unit : ''} · Streak ${streak}d`
-    : `Streak: ${streak} day${streak === 1 ? '' : 's'}`;
+    ? `${count}${isCumulative(h) ? '' : '/' + target}${h.unit ? ' ' + h.unit : ''} · Streak ${streak}d · Week ${wk.done}/${wk.target}`
+    : `Streak: ${streak} day${streak === 1 ? '' : 's'} · Week ${wk.done}/${wk.target}`;
 
+  // Binary habits get a weekly-completion ring (e.g. 1/7) so progress is visible
+  // without needing to tap into the habit. Counter habits keep their value-ring.
+  const wkPct = wk.target ? Math.min(100, Math.round(wk.done / wk.target * 100)) : 0;
+  const wkColor = wkPct >= 100 ? 'var(--green)' : wkPct >= 50 ? 'var(--teal)' : 'var(--violet)';
   const ring = counter
     ? `<svg class="habit-ring" width="40" height="40" viewBox="0 0 40 40">
          <circle class="ring-track" cx="20" cy="20" r="16" />
@@ -77,7 +84,14 @@ function renderHabitCard(h, { flat = false } = {}) {
                  style="stroke-dasharray:100.5;stroke-dashoffset:${100.5 * (1 - pct/100)}" />
          <text x="20" y="24" text-anchor="middle" class="ring-num">${count}</text>
        </svg>`
-    : `<div class="habit-check${done ? ' checked' : ''}">✓</div>`;
+    : `<svg class="habit-ring${done ? ' done' : ''}" width="40" height="40" viewBox="0 0 40 40" title="${wk.done}/${wk.target} this week">
+         <circle class="ring-track" cx="20" cy="20" r="16" />
+         <circle cx="20" cy="20" r="16" fill="none" stroke="${wkColor}" stroke-width="3"
+                 stroke-linecap="round"
+                 stroke-dasharray="100.5" stroke-dashoffset="${(100.5 * (1 - wkPct/100)).toFixed(1)}"
+                 style="transform:rotate(-90deg);transform-origin:20px 20px;transition:stroke-dashoffset .3s" />
+         <text x="20" y="24" text-anchor="middle" class="ring-num" style="font-size:11px">${wk.done}/${wk.target}</text>
+       </svg>`;
 
   const blockBadge = flat ? `<span class="badge badge-violet">${h.block}</span>` : '';
   const linkBadge = linkedHabitBadge(h);

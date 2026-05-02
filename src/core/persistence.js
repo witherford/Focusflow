@@ -53,6 +53,7 @@ function extractCore(state) {
     sleepLog: state.sleepLog || [],
     training: state.training || null,
     badHabitLog: state.badHabitLog || {},
+    sleepHabitLog: state.sleepHabitLog || {},
   };
 }
 
@@ -62,6 +63,7 @@ function mergeCore(core) {
     profile: core.profile,
     habits: core.habits,
     badHabitLog: core.badHabitLog || {},
+    sleepHabitLog: core.sleepHabitLog || {},
     chores: core.chores,
     choreDayOpen: core.choreDayOpen,
     projects: core.projects,

@@ -5,7 +5,8 @@ import { progressRing } from '../../ui/progressRing.js';
 import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
 import { metOn } from '../habits/counterMode.js';
 import { effectivePeriodKey } from '../chores/period.js';
-import { isHabitActiveToday } from '../habits/page.js';
+import { isHabitActiveToday, weeklyCompletion } from '../habits/page.js';
+import { renderWakeCard, renderBedCard } from '../sleepHabit/page.js';
 import { openQuickCapture, qcUpdateFields, saveQuickCapture } from './quickCapture.js';
 import { renderAllDay } from './allDay.js';
 import { renderCheckin } from './checkin.js';
@@ -51,8 +52,10 @@ export function renderDash() {
   }
 
   if (isWidgetOn('schedule'))   renderSchedule();   else clear('dash-schedule');
+  renderWakeCard();
   if (isWidgetOn('checkin'))    renderCheckin();    else clear('dash-checkin');
   if (isWidgetOn('timeblocks')) renderTimeblocks(); else clear('dash-timeblocks');
+  renderBedCard();
   if (isWidgetOn('allday'))     renderAllDay();     else clear('dash-allday');
   if (isWidgetOn('tasksdue'))   renderTasksDue();   else clear('dash-tasks-due');
   if (isWidgetOn('heatstrip'))  renderHeatStrip();  else clear('dash-heatstrip');
@@ -187,9 +190,7 @@ export function renderSchedule() {
   const el = document.getElementById('dash-schedule'); if (!el) return;
   const p = S.profile, todayShort = new Date().toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3);
   const routines = (p.trainRoutines || []).filter(r => (r.days || []).includes(todayShort));
-  let html = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px">
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:500">☀️ <span style="color:var(--text3)">Wake</span> ${fmtT(p.wake)}</div>
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:500">🌙 <span style="color:var(--text3)">Bed</span> ${fmtT(p.bed)}</div>`;
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px">`;
   routines.forEach(r => { const dur = calcDur(r.start, r.end); html += `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--teal-bg);border:1px solid var(--teal);border-radius:20px;font-size:12px;font-weight:500;color:var(--teal)">${r.icon || '🏋️'} ${r.name}${dur ? ' · ' + dur : ''}</div>`; });
   if (!routines.length) html += `<div style="font-size:12px;color:var(--text3)">No training today</div>`;
   el.innerHTML = html + '</div>';
@@ -238,17 +239,21 @@ export function renderTimeblocks() {
     const bT = b.id === 'morning' ? S.tasks.filter(t => !t.done && !t.parentId && t.due === today()) : [];
     const items = [
       ...bH.map(h => {
+        const wk = weeklyCompletion(h.id);
+        const wkPct = wk.target ? Math.min(100, Math.round(wk.done / wk.target * 100)) : 0;
+        const wkColor = wkPct >= 100 ? 'var(--green)' : wkPct >= 50 ? 'var(--teal)' : 'var(--violet)';
+        const wkChip = `<span class="dash-row-week" title="${wk.done}/${wk.target} this week" style="font-size:10px;color:${wkColor};font-family:'DM Mono',monospace;font-weight:600">${wk.done}/${wk.target}</span>`;
         if (h.kind === 'bad') {
           const v = bhLog[h.id];
           const checkClass = v === 'avoided' ? 'done' : v === 'indulged' ? 'indulged' : '';
           const checkChar = v === 'avoided' ? '✓' : v === 'indulged' ? '✕' : '·';
           const streak = window.calcStreak?.(h.id) ?? 0;
           const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Avoided streak">🔥${streak}</span>` : '';
-          return `<div class="timeblock-item" onclick="openBadHabitLog('${h.id}')"><div class="tb-check ${checkClass}">${checkChar}</div><span style="flex:1">${h.icon || '🚫'} ${h.name}</span>${streakChip}<span class="badge badge-rose" style="font-size:10px">bad</span></div>`;
+          return `<div class="timeblock-item" onclick="openBadHabitLog('${h.id}')"><div class="tb-check ${checkClass}">${checkChar}</div><span style="flex:1">${h.icon || '🚫'} ${h.name}</span>${wkChip}${streakChip}<span class="badge badge-rose" style="font-size:10px">bad</span></div>`;
         }
         const streak = window.calcStreak?.(h.id) ?? 0;
         const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Streak">🔥${streak}</span>` : '';
-        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${streakChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
+        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}${streakChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
       }),
       ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${cl[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
       ...bT.map(t => `<div class="timeblock-item" onclick="toggleTaskQuick('${t.id}')"><div class="tb-check">✓</div><span style="flex:1">📋 ${t.name}</span><span class="badge badge-${t.priority === 'high' ? 'rose' : t.priority === 'medium' ? 'gold' : 'green'}" style="font-size:10px">${t.priority}</span></div>`)

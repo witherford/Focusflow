@@ -90,6 +90,7 @@ import { checkBadges } from './core/gamification.js';
 import { initShortcuts } from './ui/shortcuts.js';
 import './features/dashboard/allDay.js';
 import './features/dashboard/checkin.js';
+import './features/sleepHabit/page.js';
 import './core/importers.js';
 import './core/icsImport.js';
 import './core/csvExport.js';

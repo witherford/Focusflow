@@ -172,6 +172,63 @@ export function renderInsightsSleepLog() {
   `;
 }
 
+// Wake/Bed adherence — streaks + last 28 days strip + actual time entries.
+export function renderInsightsSleepHabit() {
+  const el = document.getElementById('ins-sleep-habit'); if (!el) return;
+  const log = S.sleepHabitLog || {};
+  const fmtT = t => { if (!t) return '—'; const [h, m] = t.split(':'); const hr = +h; return (hr === 0 ? 12 : hr > 12 ? hr - 12 : hr) + ':' + m + (hr >= 12 ? 'pm' : 'am'); };
+
+  const calcStreak = kind => {
+    let s = 0;
+    for (let i = 0; i < 365; i++) {
+      const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+      const e = log[k]?.[kind]; if (!e) continue;
+      if (e.onTime) s++; else break;
+    }
+    return s;
+  };
+
+  const stripFor = kind => {
+    const days = 28; let cells = '';
+    let lateRows = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
+      const e = log[k]?.[kind];
+      let bg = 'var(--bg3)', tip = k + ': not logged', sym = '';
+      if (e) {
+        if (e.onTime) { bg = 'var(--green)'; tip = `${k}: on time`; sym = '✓'; }
+        else { bg = 'var(--rose)'; tip = `${k}: late by ${e.lateMins}m (${fmtT(e.actualTime)})`; sym = '✕'; lateRows.push({ k, e }); }
+      }
+      cells += `<div title="${tip}" style="width:14px;height:14px;border-radius:3px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:white">${sym}</div>`;
+    }
+    return { cells, lateRows };
+  };
+
+  const wakeS = calcStreak('wake'), bedS = calcStreak('bed');
+  const wake = stripFor('wake'), bed = stripFor('bed');
+
+  const block = (kind, icon, label, streak, strip) => {
+    const lateList = strip.lateRows.length
+      ? `<div style="font-size:11px;color:var(--text3);margin-top:8px">Recent misses (actual time):</div>
+         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${strip.lateRows.slice(-6).map(r => {
+            const noteTip = r.e.note ? ' — ' + r.e.note.replace(/"/g, '&quot;') : '';
+            return `<span class="badge badge-rose" title="${r.k}${noteTip}" style="font-size:11px">${r.k.slice(5)} · ${fmtT(r.e.actualTime)}</span>`;
+         }).join('')}</div>`
+      : '';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-weight:600;font-size:14px">${icon} ${label}</span>
+        <span style="font-size:11px;color:var(--text3)">target ${fmtT(S.profile?.[kind] || (kind === 'wake' ? '06:30' : '22:30'))}</span>
+        <span style="margin-left:auto;font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)">🔥 ${streak}d</span>
+      </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap">${strip.cells}</div>
+      ${lateList}
+    </div>`;
+  };
+
+  el.innerHTML = block('wake', '☀️', 'Wake', wakeS, wake) + block('bed', '🌙', 'Bed', bedS, bed);
+}
+
 // V1.1.3 — bad-habit stats card on Insights.
 export function renderInsightsBadHabits() {
   const el = document.getElementById('ins-bad-habits'); if (!el) return;
@@ -225,6 +282,7 @@ export function renderInsights() {
   renderInsightsHeatStrip();
   renderInsightsPriorities();
   renderInsightsTowardGoals();
+  renderInsightsSleepHabit();
   renderInsightsSleepLog();
   renderInsightsBadHabits();
   const sum = weekSummary();
@@ -313,3 +371,5 @@ export async function runWeeklyReview() {
 window.renderInsights = renderInsights;
 window.runWeeklyReview = runWeeklyReview;
 window.renderInsightsBadHabits = renderInsightsBadHabits;
+window.renderInsightsSleepHabit = renderInsightsSleepHabit;
+window.renderInsightsSleepLog = renderInsightsSleepLog;

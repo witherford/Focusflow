@@ -123,6 +123,30 @@
   </div>
 </div></div>
 
+<div class="modal-overlay" id="m-sleep-checkin" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="modal-title" id="msc-title" style="margin:0">Check-in</div><button class="btn-icon" onclick="closeModal('m-sleep-checkin')">✕</button></div>
+  <div id="msc-target" style="font-size:12px;color:var(--text3);margin-bottom:14px">Target —</div>
+  <div class="form-row" style="gap:8px;display:flex;flex-direction:column">
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer">
+      <input type="radio" name="msc-outcome" value="on-time" onchange="mscOutcomeChange()">
+      <span style="flex:1"><span style="margin-right:6px">✅</span><span id="msc-on-time-label">On time</span></span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer">
+      <input type="radio" name="msc-outcome" value="late" onchange="mscOutcomeChange()">
+      <span style="flex:1"><span style="margin-right:6px">❌</span><span id="msc-late-label">Late</span></span>
+    </label>
+  </div>
+  <div id="msc-late-fields" style="display:none">
+    <div class="form-row"><label>Actual time</label><input type="time" id="msc-time"></div>
+    <div class="form-row"><label>What got in the way? <span style="color:var(--text3);font-weight:400">(optional)</span></label><textarea id="msc-note" rows="3" placeholder="Notes for this miss…"></textarea></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button class="btn btn-primary" style="flex:1" onclick="mscConfirm()">Confirm</button>
+    <button class="btn" onclick="closeModal('m-sleep-checkin')">Cancel</button>
+  </div>
+</div></div>
+
 <div class="modal-overlay" id="m-project" style="display:none"><div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="m-project-title">New Project</div>
