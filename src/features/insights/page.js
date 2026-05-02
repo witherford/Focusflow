@@ -88,42 +88,45 @@ function renderInsightsTowardGoals() {
 
 export function renderInsightsSleepLog() {
   const el = document.getElementById('ins-sleep-log'); if (!el) return;
-  const log = (S.sleepLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const log = (S.sleepLog || []).slice();
   const target = parseFloat(S.profile?.sleepTarget) || 8;
-  if (!log.length) { el.innerHTML = '<div class="empty-state"><div class="es-icon">😴</div><div class="es-sub">No sleep data yet — log a night on the Sleep page.</div></div>'; return; }
-  const rangeSel = document.getElementById('ins-sleep-range');
-  const range = rangeSel?.value || '7';
-  let cutoffDays = parseInt(range);
-  let filtered = log;
-  if (range !== 'all' && cutoffDays > 0) {
-    const cutoff = new Date(Date.now() - cutoffDays * 864e5).toISOString().split('T')[0];
-    filtered = log.filter(s => s.date >= cutoff);
+
+  // Anchor to Monday of this week (matching weekKey() in core/state.js).
+  const now = new Date();
+  const dy = now.getDay();
+  const monOffset = dy === 0 ? -6 : 1 - dy;
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(now.getDate() + monOffset);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    days.push({ key: d.toISOString().split('T')[0], dow: d.toLocaleDateString('en-GB', { weekday: 'short' }), dStr: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) });
   }
-  if (!filtered.length) { el.innerHTML = '<div class="caption" style="text-align:center;padding:14px">No sleep entries in this range.</div>'; return; }
-  const hours = filtered.map(s => s.hours || 0);
-  const total = hours.reduce((a, b) => a + b, 0);
-  const avg = total / hours.length;
-  const min = Math.min(...hours);
-  const max = Math.max(...hours);
-  const onTarget = hours.filter(h => h >= target).length;
-  const targetPct = Math.round(onTarget / hours.length * 100);
 
-  // Display newest first for readability.
-  const rows = filtered.slice().reverse();
-  // Bar scale — anchor to max(target, observed max) so the target line always
-  // fits within the bar track.
-  const scaleMax = Math.max(target + 1, max + 0.5, 9);
+  const byDate = {};
+  log.forEach(s => { byDate[s.date] = s; });
 
-  // Use a CSS grid of one row per night. Each row: date + day-of-week,
-  // hour value, horizontal bar with target marker, quality (if any),
-  // and a delta from target.
-  const rowsHtml = rows.map(s => {
+  // Bar scale — keep stable so visual comparisons across nights stay honest.
+  const allHrs = log.map(s => s.hours || 0);
+  const scaleMax = Math.max(target + 1, ...allHrs, 9) + 0.5;
+  const targetLeft = (target / scaleMax) * 100;
+
+  const rowsHtml = days.map(({ key, dow, dStr }) => {
+    const s = byDate[key];
+    if (!s) {
+      return `<div class="sleep-row" style="opacity:.55">
+        <div class="sleep-date"><div class="sleep-dow">${dow}</div><div class="sleep-dstr">${dStr}</div></div>
+        <div class="sleep-hours" style="color:var(--text3)">—</div>
+        <div class="sleep-bar-wrap" title="No entry">
+          <div class="sleep-bar-track">
+            <div class="sleep-bar-target" style="left:${targetLeft}%"></div>
+          </div>
+        </div>
+        <div class="sleep-delta" style="color:var(--text3)">—</div>
+        <div></div>
+      </div>`;
+    }
     const v = s.hours || 0;
-    const dt = new Date(s.date + 'T12:00:00');
-    const dow = dt.toLocaleDateString('en-GB', { weekday: 'short' });
-    const dStr = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     const pct = Math.max(2, (v / scaleMax) * 100);
-    const targetLeft = (target / scaleMax) * 100;
     const colour = v >= target ? 'var(--green)' : v >= target - 1 ? 'var(--teal)' : v >= target - 2.5 ? 'var(--gold)' : 'var(--rose)';
     const delta = v - target;
     const deltaLbl = (delta >= 0 ? '+' : '') + delta.toFixed(1) + 'h';
@@ -143,21 +146,29 @@ export function renderInsightsSleepLog() {
     </div>`;
   }).join('');
 
+  // Averages — this week, this month, all time.
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const weekKeys = new Set(days.map(d => d.key));
+  const weekHrs = log.filter(s => weekKeys.has(s.date)).map(s => s.hours || 0);
+  const monthPrefix = now.toISOString().slice(0, 7); // YYYY-MM
+  const monthHrs = log.filter(s => s.date.startsWith(monthPrefix)).map(s => s.hours || 0);
+  const allTimeHrs = allHrs;
+
+  const stat = (label, hrs) => {
+    if (!hrs.length) return `<div style="flex:1;min-width:90px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</div><div style="font-size:18px;font-weight:700;color:var(--text3)">—</div><div style="font-size:11px;color:var(--text3)">no entries</div></div>`;
+    const a = avg(hrs);
+    const col = a >= target ? 'var(--green)' : a >= target - 1 ? 'var(--teal)' : a >= target - 2.5 ? 'var(--gold)' : 'var(--rose)';
+    return `<div style="flex:1;min-width:90px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${label}</div><div style="font-size:18px;font-weight:700;color:${col}">${a.toFixed(1)}h</div><div style="font-size:11px;color:var(--text3)">${hrs.length} night${hrs.length === 1 ? '' : 's'}</div></div>`;
+  };
+
+  const header = log.length
+    ? `<div style="display:flex;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">${stat('This week', weekHrs)}${stat('This month', monthHrs)}${stat('All time', allTimeHrs)}<div style="flex:1;min-width:90px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Target</div><div style="font-size:18px;font-weight:700;color:var(--text)">${target}h</div><div style="font-size:11px;color:var(--text3)">per night</div></div></div>`
+    : '<div class="caption" style="text-align:center;padding:8px 0 14px">No sleep entries yet — log a night on the Sleep page.</div>';
+
   el.innerHTML = `
-    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
-      <span><strong style="color:var(--text)">${avg.toFixed(1)}h</strong> <span style="color:var(--text3)">avg</span></span>
-      <span><strong style="color:var(--text)">${target}h</strong> <span style="color:var(--text3)">target</span></span>
-      <span><strong style="color:var(--green)">${onTarget}/${hours.length}</strong> <span style="color:var(--text3)">nights at target (${targetPct}%)</span></span>
-      <span><strong style="color:var(--text)">${min.toFixed(1)}–${max.toFixed(1)}h</strong> <span style="color:var(--text3)">range</span></span>
-    </div>
+    ${header}
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">This week (Mon → Sun)</div>
     <div class="sleep-grid">${rowsHtml}</div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap">
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;vertical-align:middle"></span> at/above target</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px;vertical-align:middle"></span> within 1h</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--gold);border-radius:2px;vertical-align:middle"></span> 1–2.5h short</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--rose);border-radius:2px;vertical-align:middle"></span> &gt;2.5h short</span>
-      <span><span style="display:inline-block;width:2px;height:10px;background:var(--text);vertical-align:middle"></span> target marker</span>
-    </div>
   `;
 }
 
