@@ -156,38 +156,70 @@ const VOICE_PRIORITIES = [
 ];
 
 function pickBestVoice(preferLang = 'en') {
-  if (_bestVoiceCache) return _bestVoiceCache;
+  if (_bestVoiceCache !== null && _bestVoiceCache !== undefined) return _bestVoiceCache;
   const voices = loadVoices();
-  if (!voices.length) return null;
+  if (!voices.length) { _bestVoiceCache = null; return null; }
+  // Only consider locally-installed voices. iOS lists many "downloadable"
+  // voices with localService:false; assigning one to an utterance silently
+  // produces no audio because the voice asset isn't on the device.
+  const local = voices.filter(v => v.localService);
   for (const re of VOICE_PRIORITIES) {
-    const v = voices.find(x => re.test(x.name));
+    const v = local.find(x => re.test(x.name));
     if (v) { _bestVoiceCache = v; return v; }
   }
-  // Otherwise: prefer non-default English voice that mentions "natural" / "enhanced".
-  let v = voices.find(x => /natural|neural|enhanced|premium/i.test(x.name) && x.lang?.startsWith(preferLang));
-  if (!v) v = voices.find(x => x.lang?.startsWith(preferLang) && !x.localService); // cloud voices
-  if (!v) v = voices.find(x => x.lang?.startsWith(preferLang));
-  _bestVoiceCache = v || null;
-  return _bestVoiceCache;
+  // No priority hit — pick any local English voice; never set a cloud voice.
+  const v = local.find(x => x.lang?.startsWith(preferLang) && x.default)
+         || local.find(x => x.lang?.startsWith(preferLang))
+         || null;
+  _bestVoiceCache = v;
+  return v;
 }
 
 export function speak(text, opts = {}) {
   try {
     const synth = window.speechSynthesis; if (!synth || !text) return;
-    synth.cancel();
+    // Only cancel when something is actually queued/speaking AND the caller
+    // wants to interrupt. Unconditional cancel() can leave Chromium's synth
+    // stuck paused when speak() is called from a non-gesture context (e.g.
+    // a setInterval tick), which is exactly how guided cues are fired.
+    if (opts.interrupt && (synth.speaking || synth.pending)) synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    // Slightly slower + warmer pitch reads more "human" for guided content.
-    u.rate = opts.rate ?? 0.92;
-    u.pitch = opts.pitch ?? 1.02;
+    // Defaults intentionally 1.0 — non-default rate/pitch can silence some
+    // iOS voices entirely. Callers can opt into custom rate/pitch via opts.
+    u.rate = opts.rate ?? 1.0;
+    u.pitch = opts.pitch ?? 1.0;
     u.volume = opts.volume ?? 1.0;
     const v = pickBestVoice(opts.lang || 'en');
     if (v) { u.voice = v; u.lang = v.lang; }
+    u.onerror = (e) => { try { console.warn('[speak] error', e?.error || e); } catch {} };
     synth.speak(u);
-  } catch (e) {}
+    // Documented Chromium workaround: speak() can land while the engine is
+    // paused (after cancel(), or after the ~15s idle bug). resume() is a
+    // no-op when not paused and is required to actually produce audio when
+    // it is.
+    try { synth.resume(); } catch {}
+  } catch (e) { try { console.warn('[speak] threw', e); } catch {} }
 }
 
-export function listVoices() { return loadVoices().map(v => ({ name: v.name, lang: v.lang, localService: v.localService })); }
-if (typeof window !== 'undefined') window.listVoices = listVoices;
+// Prime speechSynthesis from a real user gesture (e.g. the Play tap) so that
+// later setInterval-driven speak() calls are allowed in installed PWAs. Speaks
+// a single space at zero volume — inaudible, but registers a gesture-allowed
+// utterance with the engine.
+export function primeSpeech() {
+  try {
+    const synth = window.speechSynthesis; if (!synth) return;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    const v = pickBestVoice('en');
+    if (v) { u.voice = v; u.lang = v.lang; }
+    synth.speak(u);
+    try { synth.resume(); } catch {}
+  } catch (e) { try { console.warn('[primeSpeech] threw', e); } catch {} }
+}
+
+export function listVoices() { return loadVoices().map(v => ({ name: v.name, lang: v.lang, localService: v.localService, default: v.default })); }
+export function getBestVoice() { return pickBestVoice('en'); }
+if (typeof window !== 'undefined') { window.listVoices = listVoices; window.getBestVoice = getBestVoice; }
 
 // ─── Audio unlock on first user gesture ──────────────────────────────────────
 // Desktop browsers (Chrome, Firefox, Safari, Edge) keep AudioContexts in a
@@ -218,4 +250,5 @@ window.stopAmbient = stopAmbient;
 window.playAmbient = playAmbient;
 window.playChime = playChime;
 window.speak = speak;
+window.primeSpeech = primeSpeech;
 window.unlockAudio = unlockAudio;

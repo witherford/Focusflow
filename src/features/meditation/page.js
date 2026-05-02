@@ -1,7 +1,7 @@
 // Meditation — extracted from focusflow_v10.html lines 1925-2321
 import { S, today, uid, f2, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
-import { playChime } from '../../core/audio.js';
+import { playChime, primeSpeech } from '../../core/audio.js';
 import { tickGuidedCues, resetCueFiringState, getActiveScript } from './guided.js';
 
 const medCfg = () => (S.meditation.cfg ||= { sounds: true, fullscreen: false });
@@ -37,9 +37,16 @@ export function medToggle() {
     const script = getActiveScript();
     document.getElementById('med-phase').textContent = script ? 'GUIDED · ' + script.name.toUpperCase() : 'MEDITATING';
     window.reqWL();
+    // Prime speechSynthesis synchronously to the user's tap. Without this,
+    // installed PWAs (Chromium) silently drop speak() calls fired from the
+    // setInterval below because they're detached from a user gesture.
+    if (script) primeSpeech();
     if (medSoundsOn()) playChime('start');
     if (medFullscreenOn()) medFullscreen();
     medInt = setInterval(() => {
+      // Keep speechSynthesis awake — Chromium silently stops speaking after
+      // ~15s idle; a no-op resume() each tick prevents mid-cue cutoff.
+      try { window.speechSynthesis?.resume(); } catch {}
       medSecs--;
       const el = document.getElementById('med-timer'); if (el) el.textContent = fmtSecs(medSecs);
       const ring = document.querySelector('.med-ring-progress');
@@ -66,6 +73,66 @@ export function medToggle() {
 }
 
 export function medIsRunning() { return medRunning; }
+
+// Visual fallback for guided cues — always shown, regardless of whether
+// speechSynthesis actually produced audio. On iOS standalone PWAs (Home
+// Screen icon) speech is silently a no-op, so this is the only signal the
+// user gets. Also useful in quiet environments and for accessibility.
+let _cueHideTimer = null;
+export function showGuidedCue(text) {
+  const el = document.getElementById('med-cue'); if (!el) return;
+  el.textContent = text;
+  el.style.opacity = '1';
+  if (_cueHideTimer) clearTimeout(_cueHideTimer);
+  // Roughly 70ms per character, clamped — matches a comfortable read pace
+  // and how long the spoken version would have lasted.
+  const dwell = Math.min(20000, Math.max(6000, text.length * 70));
+  _cueHideTimer = setTimeout(() => { el.style.opacity = '0'; }, dwell);
+}
+window.showGuidedCue = showGuidedCue;
+
+// iOS detection (Safari tab OR Home Screen PWA — both route speechSynthesis
+// through the ringer audio category, which is the most common cause of
+// "chime works, voice silent" on iPhone/iPad).
+function isIos() {
+  try {
+    const ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  } catch { return false; }
+}
+export function maybeShowIosVoiceNotice() {
+  const el = document.getElementById('gm-ios-notice'); if (!el) return;
+  el.style.display = isIos() ? '' : 'none';
+}
+window.maybeShowIosVoiceNotice = maybeShowIosVoiceNotice;
+
+// Diagnostic: speak a short test phrase and report what the engine actually
+// did (started? errored? completed? which voice?). Lets the user — and us —
+// tell apart "silent because no voice" from "silent because iOS ringer is
+// off" without scrubbing through a 5-min meditation.
+export function runVoiceTest() {
+  const status = document.getElementById('gm-voice-test-status');
+  const set = (txt, color) => { if (status) { status.textContent = txt; status.style.color = color || 'var(--text3)'; } };
+  const synth = window.speechSynthesis;
+  if (!synth) { set('✗ No speechSynthesis on this browser', 'var(--rose)'); return; }
+  // Gesture-prime synchronously to the click.
+  try { window.primeSpeech?.(); } catch {}
+  const v = window.getBestVoice?.();
+  const u = new SpeechSynthesisUtterance('Voice test, one two three.');
+  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+  if (v) { u.voice = v; u.lang = v.lang; }
+  let started = false, ended = false;
+  const voiceLabel = v ? `${v.name} (${v.lang}${v.localService ? ', local' : ', cloud'})` : 'system default (no match)';
+  set(`… submitting test utterance · voice: ${voiceLabel}`);
+  u.onstart = () => { started = true; set(`✓ Speech started · voice: ${voiceLabel}. If silent, raise ringer volume and turn off silent switch (iOS).`, 'var(--teal)'); };
+  u.onend = () => { ended = true; set(`✓ Speech completed · voice: ${voiceLabel}.`, 'var(--teal)'); };
+  u.onerror = (e) => { set(`✗ Speech error: ${e?.error || 'unknown'} · voice: ${voiceLabel}`, 'var(--rose)'); };
+  try { synth.speak(u); synth.resume(); } catch (e) { set(`✗ speak() threw: ${e?.message || e}`, 'var(--rose)'); return; }
+  setTimeout(() => {
+    if (!started && !ended) set(`✗ No events fired in 4 s — engine refused. Try: install a voice in Settings → Accessibility → Spoken Content → Voices.`, 'var(--rose)');
+  }, 4000);
+}
+window.runVoiceTest = runVoiceTest;
 
 export function medFullscreen() {
   const total = () => medDur();
@@ -107,7 +174,7 @@ export function resetTodayMed() {
   renderMedStats(); window.renderHeatmaps?.(); updateMedProg();
   window.toast?.(`Reset · removed ${todays.length} session${todays.length === 1 ? '' : 's'}`);
 }
-export function medReset() { clearInterval(medInt); medRunning = false; medSecs = 0; window.relWL(); const el = document.getElementById('med-timer'); if (el) el.textContent = f2(medDur() / 60) + ':00'; const ph = document.getElementById('med-phase'); if (ph) ph.textContent = 'READY'; const btn = document.getElementById('med-btn'); if (btn) btn.textContent = '▶'; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; }
+export function medReset() { clearInterval(medInt); medRunning = false; medSecs = 0; window.relWL(); const el = document.getElementById('med-timer'); if (el) el.textContent = f2(medDur() / 60) + ':00'; const ph = document.getElementById('med-phase'); if (ph) ph.textContent = 'READY'; const btn = document.getElementById('med-btn'); if (btn) btn.textContent = '▶'; const ring = document.querySelector('.med-ring-progress'); if (ring) ring.style.strokeDashoffset = '678.6'; const cue = document.getElementById('med-cue'); if (cue) { cue.style.opacity = '0'; cue.textContent = ''; } if (_cueHideTimer) { clearTimeout(_cueHideTimer); _cueHideTimer = null; } }
 export function medSkip() {
   if (!medRunning && medSecs === 0) return;
   clearInterval(medInt); medRunning = false; window.relWL();

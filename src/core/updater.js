@@ -125,9 +125,34 @@ export async function checkForUpdatesNow({ silent = false } = {}) {
   }
 }
 
-// Auto-check on app boot (once). Silent — only toasts if there's an update.
+// Auto-check on app boot. Silent — toasts if an update is available, then
+// silently applies the new service worker the next time the app goes to the
+// background. iOS PWAs can stay running for days, so without this, "update
+// available" notifications pile up but never actually take effect.
+let _autoApplyArmed = false;
+let _autoApplyDone = false;
+function armAutoApplyOnHide() {
+  if (_autoApplyArmed) return;
+  _autoApplyArmed = true;
+  const handler = () => {
+    if (document.visibilityState !== 'hidden' || _autoApplyDone) return;
+    if (!(isUpdateAvailable() || window._ffUpdateAvailable)) return;
+    _autoApplyDone = true;
+    // skipWaiting without immediate reload — next launch picks up new precache.
+    try { window.ffUpdateApp?.(false); } catch (e) { console.warn('[updater] auto-apply failed', e); }
+  };
+  document.addEventListener('visibilitychange', handler);
+  // Also run periodic background checks every 15 minutes while the app is
+  // open — covers the case where the user keeps the PWA open for a long
+  // session and a new build ships mid-session.
+  setInterval(() => { checkForUpdatesNow({ silent: true }).catch(() => {}); }, 15 * 60 * 1000);
+}
 export function autoCheckOnStartup({ delayMs = 1500 } = {}) {
-  setTimeout(() => { checkForUpdatesNow({ silent: true }).catch(() => {}); }, delayMs);
+  setTimeout(() => {
+    checkForUpdatesNow({ silent: true })
+      .then(() => armAutoApplyOnHide())
+      .catch(() => armAutoApplyOnHide());
+  }, delayMs);
 }
 
 window.checkForUpdatesNow = (opts) => checkForUpdatesNow(opts);

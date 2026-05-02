@@ -144,7 +144,11 @@ export function tickGuidedCues(elapsedSec, totalSec) {
     const scaledAt = cue[0] * scale;
     if (elapsedSec >= scaledAt) {
       _firedCueIdx.add(i);
-      speak(cue[1], { rate: 0.92, pitch: 1.02 });
+      // Default rate/pitch — non-default values can silence iOS voices.
+      speak(cue[1]);
+      // Always also display the cue on screen — speech may be silent (iOS
+      // ringer routing, missing voice asset, quiet environment).
+      window.showGuidedCue?.(cue[1]);
     }
   });
 }
@@ -170,6 +174,8 @@ export function renderGuidedTab() {
     </button>`;
   }).join('');
   highlightClearButton();
+  // Show iOS-standalone voice notice if applicable.
+  window.maybeShowIosVoiceNotice?.();
 }
 
 if (typeof window !== 'undefined') {

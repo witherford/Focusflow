@@ -3,7 +3,7 @@
 // it rolls to (minor + 1).0. On minor == 10 it rolls to (major + 1).0.0.
 //
 // To bump on next change: increment APP_VERSION here.
-export const APP_VERSION = '1.1.4';
+export const APP_VERSION = '1.1.5';
 
 export function bumpVersion(v) {
   // Pure helper — handy for tests / future automation.
