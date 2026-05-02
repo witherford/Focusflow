@@ -1,0 +1,39 @@
+<!-- ═══════════════════════════════════════ PROJECTS ════ -->
+<div class="page" id="page-projects">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Projects</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseProjects()">−</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandProjects()">+</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddProject()">+ New</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="pv-tree">Projects</div>
+      <div class="tab" data-tab="pv-all">All Tasks</div>
+      <div class="tab" data-tab="pv-today">Due Today</div>
+      <div class="tab" data-tab="pv-overdue">Overdue</div>
+      <div class="tab" data-tab="pv-calendar">Calendar</div>
+      <div class="tab" data-tab="pv-breakdown">Overview</div>
+    </div>
+  </div>
+  <div class="section">
+    <div id="pv-tree" class="tab-content"><div id="proj-tree"></div></div>
+    <div id="pv-all" class="tab-content" style="display:none">
+      <div class="sort-bar">
+        <label>Sort</label><select id="all-sort" onchange="renderAllFlat()"><option value="priority">Priority</option><option value="due">Due</option><option value="project">Project</option><option value="name">Name</option></select>
+        <label>Show</label><select id="all-filter" onchange="renderAllFlat()"><option value="active">Active</option><option value="all">All</option><option value="done">Done</option></select>
+      </div>
+      <div id="all-flat"></div>
+    </div>
+    <div id="pv-today" class="tab-content" style="display:none"><div id="today-tasks"></div></div>
+    <div id="pv-overdue" class="tab-content" style="display:none"><div id="overdue-tasks"></div></div>
+    <div id="pv-calendar" class="tab-content" style="display:none"><div id="calendar-view"></div></div>
+    <div id="pv-breakdown" class="tab-content" style="display:none"><div id="breakdown"></div></div>
+  </div>
+</div>
+

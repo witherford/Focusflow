@@ -1,0 +1,35 @@
+<!-- ═══════════════════════════════════════ HABITS ════════ -->
+<div class="page" id="page-habits">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Habits</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="collapseHabits()">− Fold</button>
+        <button class="btn btn-sm btn-ghost" onclick="expandHabits()">+ Expand</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddHabit()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="h-today">Today</div>
+      <div class="tab" data-tab="h-all">All Habits</div>
+      <div class="tab" data-tab="h-heatmap">History</div>
+    </div>
+  </div>
+  <div id="h-today" class="tab-content section">
+    <div id="h-morning"></div><div id="h-afternoon"></div><div id="h-evening"></div><div id="h-allday"></div>
+  </div>
+  <div id="h-all" class="tab-content section" style="display:none"><div id="h-all-list"></div></div>
+  <div id="h-heatmap" class="tab-content section" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Habit History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHabitHeatmap()"></div>
+      </div>
+      <div class="heatmap" id="heatmap-grid"></div>
+    </div>
+  </div>
+</div>
+

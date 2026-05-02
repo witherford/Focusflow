@@ -1,0 +1,54 @@
+<!-- ═══════════════════════════════════════ INSIGHTS ═════ -->
+<div class="page" id="page-insights">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Trends & review</div><div class="page-title">Insights</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm" onclick="startWReview()">📝 Guided review</button>
+        <button class="btn btn-sm btn-primary" onclick="runWeeklyReview()">✨ AI review</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div id="level-card"></div>
+
+    <!-- AI weekly review pinned to the top — fires on demand via the header button. -->
+    <div class="card" id="ins-review-card-top" style="margin-bottom:14px;display:none">
+      <div class="card-header"><div class="card-title">✨ AI weekly review</div></div>
+      <div id="ins-review-top" style="font-size:13px;line-height:1.7;color:var(--text2)"></div>
+    </div>
+
+    <!-- Today (moved from the dashboard) -->
+    <div class="stat-grid" id="ins-today-stat-grid" style="margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-today-habits">0%</div><div class="stat-label">Habits today</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="ins-today-tasks">0</div><div class="stat-label">Tasks done</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-today-focus">0h</div><div class="stat-label">Focus today</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="ins-today-streak">0</div><div class="stat-label">Streak</div></div>
+    </div>
+    <div id="ins-heatstrip" style="margin-bottom:14px"></div>
+    <div id="ins-priorities" style="margin-bottom:14px"></div>
+    <div id="ins-toward-goals" style="margin-bottom:14px"></div>
+
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:6px 0 8px">Trends · 7 days</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="ins-hab-week">0%</div><div class="stat-label">Habits · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="ins-focus-week">0h</div><div class="stat-label">Focus · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="ins-med-week">0</div><div class="stat-label">Med min · 7d</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="ins-tasks-week">0</div><div class="stat-label">Tasks · 7d</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Habit completion · 8 weeks</div></div><div id="ins-hab-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Deep work · 30 days</div></div><div id="ins-dw-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Time-of-day · focus minutes</div></div><div id="ins-tod-chart"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Goals progress</div></div><div id="ins-goals"></div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Fitness volume · weightlifting</div></div><div id="ins-fit-chart"></div></div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">😴 Sleep log</div></div>
+      <div id="ins-sleep-log"></div>
+    </div>
+    <div class="card" id="ins-bad-habits-card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">🚫 Bad-habit stats</div></div><div id="ins-bad-habits"></div></div>
+    <div class="card" id="ins-review-card" style="margin-bottom:14px;display:none"><div class="card-header"><div class="card-title">✨ Weekly review</div></div><div id="ins-review" style="font-size:13px;line-height:1.7;color:var(--text2)"></div></div>
+    <div id="badges-grid" style="margin-bottom:14px"></div>
+  </div>
+</div>
+

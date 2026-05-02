@@ -1,0 +1,28 @@
+<!-- ═══════════════════════════════════════ SHOPPING ════ -->
+<div class="page" id="page-shopping">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Shopping</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-ghost" onclick="clearChecked()">Clear done</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddShop()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <button class="btn btn-sm" onclick="clearAllShop()">🗑 Clear all</button>
+    </div>
+    <div class="sort-bar">
+      <label>Sort</label><select id="shop-sort" onchange="renderShop()"><option value="category">Category</option><option value="name">Name</option></select>
+      <label>Show</label><select id="shop-filter" onchange="renderShop()"><option value="all">All</option><option value="unchecked">Unchecked</option><option value="checked">Checked</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="shop-total">0</div><div class="stat-label">Items</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="shop-done">0</div><div class="stat-label">In Basket</div></div>
+    </div>
+    <div id="shop-list"></div>
+  </div>
+</div>
+

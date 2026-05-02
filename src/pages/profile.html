@@ -1,0 +1,72 @@
+<!-- ═══════════════════════════════════════ PROFILE ════ -->
+<div class="page" id="page-profile">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Profile & AI</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="ai-banner ai-banner-violet" id="ai-plan-banner">
+      <div class="ai-banner-content">
+        <div class="free-badge">✦ Free AI · No account needed</div>
+        <div style="font-size:15px;font-weight:700;color:var(--violet);margin-bottom:6px">✨ AI Plan Generator</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">Fill in your profile and get a personalised self-improvement plan.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="generatePlan()" id="gen-btn" style="background:var(--violet);border-color:var(--violet)">✨ Generate My Plan</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearPlan()">🗑 Clear plan</button>
+          <span id="gen-status" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <div id="ai-thinking" class="ai-thinking"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Thinking…</span></div>
+        <div id="ai-stream-box" class="ai-stream-box"></div>
+        <div id="ai-plan-summary" style="display:none;margin-top:12px;padding:14px;background:rgba(0,0,0,0.25);border-radius:var(--r-sm);font-size:13px;line-height:1.7;color:var(--text2);border-left:3px solid var(--violet)"></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Personal Info</div></div>
+        <div class="form-row"><label>Name</label><input type="text" id="p-name" autocomplete="given-name" autocapitalize="words" enterkeyhint="next"></div>
+        <div class="form-row"><label>Weight (kg)</label><input type="number" id="p-weight" inputmode="decimal" autocomplete="off" enterkeyhint="next"></div>
+        <div class="form-row"><label>Wake time</label><input type="time" id="p-wake" value="06:30"></div>
+        <div class="form-row"><label>Bed time</label><input type="time" id="p-bed" value="22:30"></div>
+        <div class="form-row"><label>Current sleep (hrs)</label><input type="number" id="p-sleep-now" value="7" step="0.5"></div>
+        <div class="form-row"><label>Sleep target (hrs)</label><input type="number" id="p-sleep-target" value="8" step="0.5"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Training</div></div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5">Training routines &amp; scheduled events now live on the <strong>🏋️ Training</strong> page — manage them there to keep everything in one place.</div>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="goPage('fitness')">Go to Training →</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">✅ Positive habits to build</div></div>
+      <div class="check-grid" id="pos-checks"></div>
+      <div class="form-row" style="margin-top:10px"><label>Add custom (one per line)</label><textarea id="pos-custom"></textarea></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">❌ Negative habits to stop</div></div>
+      <div class="check-grid" id="neg-checks"></div>
+      <div class="form-row" style="margin-top:10px"><label>Add custom (one per line)</label><textarea id="neg-custom"></textarea></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">🎯 Long-term goals</div></div>
+      <textarea id="p-goals" rows="4" placeholder="List your goals and ambitions…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">🥗 Dietary preferences</div></div>
+      <div class="form-row"><label>Diet style</label>
+        <select id="p-diet"><option value="balanced">Balanced</option><option value="highprotein">High protein</option><option value="lowcarb">Low carb</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="mediterranean">Mediterranean</option><option value="keto">Keto</option></select>
+      </div>
+      <div class="form-row"><label>Allergies / avoid</label><input type="text" id="p-allergies" autocapitalize="none" enterkeyhint="done"></div>
+      <div class="form-row"><label>Meals per day</label><input type="number" id="p-meals" value="3" min="2" max="6"></div>
+    </div>
+  </div>
+</div>
+

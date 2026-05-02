@@ -16,6 +16,11 @@ import './styles/layout.css';
 import './styles/components.css';
 import './styles/pages.css';
 
+// Page markup is split into src/pages/*.html partials and injected into
+// <main id="main"> here, before any feature module queries the DOM.
+import { injectPages } from './pages/index.js';
+injectPages();
+
 // App version (visible in sidebar logo)
 import { APP_VERSION } from './core/version.js';
 

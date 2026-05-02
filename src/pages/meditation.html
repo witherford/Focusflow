@@ -1,0 +1,197 @@
+<!-- ═══════════════════════════════════════ MEDITATION ═══ -->
+<div class="page" id="page-meditation">
+  <div class="page-header" id="hdr-meditation">
+    <div class="page-header-inner">
+      <div class="page-title-wrap">
+        <div class="page-subtitle">Mindfulness & Calm</div>
+        <div class="page-title">Meditation</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openAddMedTimer()">+ Timer</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="med-tab-timer">🧘 Meditation</div>
+      <div class="tab" data-tab="med-tab-breath">🫁 Breathing</div>
+      <div class="tab" data-tab="med-tab-saved">⭐ Saved</div>
+      <div class="tab" data-tab="med-tab-stats">📊 Stats</div>
+    </div>
+  </div>
+
+  <!-- TIMER TAB -->
+  <div id="med-tab-timer" class="tab-content section">
+    <div class="ambient-card" style="margin-bottom:14px">
+      <div class="card-header" style="margin-bottom:8px"><div class="card-title">🎧 Ambient Sound</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <button class="med-sound-btn active" data-sound="" onclick="setMedSound(this,'')">🔇<span>Silence</span></button>
+        <button class="med-sound-btn" data-sound="brown" onclick="setMedSound(this,'brown')">🤎<span>Focus</span></button>
+        <button class="med-sound-btn" data-sound="rain" onclick="setMedSound(this,'rain')">🌧️<span>Rain</span></button>
+        <button class="med-sound-btn" data-sound="waves" onclick="setMedSound(this,'waves')">🌊<span>Waves</span></button>
+      </div>
+    </div>
+
+    <div class="med-timer-card">
+      <div class="med-timer-ring-wrap">
+        <svg class="med-ring-svg" viewBox="0 0 240 240">
+          <defs>
+            <linearGradient id="medGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#3ecfb0"/>
+              <stop offset="100%" style="stop-color:#7c6ef7"/>
+            </linearGradient>
+          </defs>
+          <circle class="timer-ring-bg" cx="120" cy="120" r="108" stroke-width="8"/>
+          <circle class="med-ring-progress" cx="120" cy="120" r="108" stroke="url(#medGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="678.6" stroke-dashoffset="0" fill="none" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 12px rgba(62,207,176,0.5))"/>
+        </svg>
+        <div class="med-timer-inner">
+          <div id="med-timer" style="font-family:'DM Mono',monospace;font-size:44px;font-weight:400;letter-spacing:1px;line-height:1">10:00</div>
+          <div id="med-phase" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-top:4px">READY</div>
+        </div>
+      </div>
+
+      <div id="med-cue" style="opacity:0;transition:opacity .4s ease;min-height:0;margin:14px 4px 0;padding:0 14px;font-size:14px;line-height:1.5;color:var(--teal);text-align:center;font-style:italic"></div>
+
+      <div class="timer-controls" style="justify-content:center;gap:16px;margin:20px 0 10px">
+        <button class="timer-btn timer-btn-secondary" onclick="medReset()" style="width:50px;height:50px">↺</button>
+        <button class="timer-btn" id="med-btn" onclick="medToggle()" style="width:68px;height:68px;background:linear-gradient(135deg,#3ecfb0,#7c6ef7);border:none;color:#fff;font-size:26px;box-shadow:0 6px 24px rgba(62,207,176,0.35)">▶</button>
+        <button class="timer-btn timer-btn-secondary" onclick="medSkip()" style="width:50px;height:50px" title="End & log">⏭</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 4px">
+        <div class="form-row" style="margin:0"><label>Duration (min)</label><input type="number" id="med-dur" value="10" min="1" max="180" onchange="medReset()"></div>
+        <div class="form-row" style="margin:0"><label>Daily target (min)</label><input type="number" id="med-target" value="10" min="1" onchange="saveMedTarget()"></div>
+      </div>
+      <div style="padding:12px 4px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today's progress</span><span id="med-prog-label">0 / 10 min</span></div>
+        <div class="progress-track"><div class="fill" id="med-prog-fill" style="background:var(--teal);width:0%"></div></div>
+      </div>
+      <div style="padding:10px 4px 0;display:flex;flex-direction:column;gap:6px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" id="med-cfg-sounds" checked onchange="saveMedCfg()"> Start / end chime</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="checkbox" id="med-cfg-fullscreen" onchange="saveMedCfg()"> Start in fullscreen</label>
+      </div>
+      <div style="padding:14px 4px 0;display:flex;justify-content:flex-end">
+        <button class="btn btn-sm" style="font-size:11px" onclick="resetTodayMed()">↺ Reset today's progress</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-header"><div class="card-title">Quick presets · duration</div><div style="font-size:11px;color:var(--text3)">applies to silent or guided</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="med-quick-presets">
+        <button class="med-preset-quick" onclick="setMedDur(5)">5 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(10)">10 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(15)">15 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(20)">20 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(30)">30 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(45)">45 min</button>
+        <button class="med-preset-quick" onclick="setMedDur(60)">1 hr</button>
+        <button class="med-preset-quick" onclick="setMedDur(90)">90 min</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-header"><div class="card-title">🌿 Guided meditation</div><div style="font-size:11px;color:var(--text3)">spoken + on-screen cues over your chosen duration</div></div>
+      <div id="gm-ios-notice" style="display:none;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:rgba(124,110,247,0.08);border:1px solid rgba(124,110,247,0.25);font-size:12px;line-height:1.45;color:var(--text2)">
+        <strong style="color:var(--violet)">iPhone / iPad voice tips</strong> — Spoken cues use the <em>ringer</em> audio channel on iOS, not media. If the side switch is on silent or ringer volume is at zero, you'll hear the chime but not the voice (chime uses media). To hear voice: turn off silent mode and raise ringer volume. Some voices are downloads; install one in Settings → Accessibility → Spoken Content → Voices. On-screen cues will appear regardless.
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="gm-voice-test" onclick="runVoiceTest()" type="button">🔊 Test voice</button>
+        <span id="gm-voice-test-status" style="font-size:12px;color:var(--text3);line-height:1.35"></span>
+      </div>
+      <div id="gm-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="btn btn-sm" id="gm-clear" onclick="clearGuided()" style="display:none">⏹ Silent (clear guide)</button></div>
+    </div>
+  </div>
+
+  <!-- BREATHING TAB -->
+  <div id="med-tab-breath" class="tab-content section" style="display:none">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Breathing Techniques</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="breath-technique-list">
+        <div class="breath-technique-btn active" data-in="4" data-hold1="4" data-out="4" data-hold2="4" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">📦 Box Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">4s · 4s · 4s · 4s — Stress relief & focus</div>
+        </div>
+        <div class="breath-technique-btn" data-in="4" data-hold1="7" data-out="8" data-hold2="0" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">🌙 4-7-8 Relaxing</div>
+          <div style="font-size:11px;color:var(--text3)">4s · 7s · 8s · 0s — Sleep & anxiety</div>
+        </div>
+        <div class="breath-technique-btn" data-in="6" data-hold1="0" data-out="6" data-hold2="0" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">⚖️ Equal Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">6s · 0s · 6s · 0s — Balance & calm</div>
+        </div>
+        <div class="breath-technique-btn" data-in="2" data-hold1="1" data-out="4" data-hold2="1" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">⚡ Energising Breath</div>
+          <div style="font-size:11px;color:var(--text3)">2s · 1s · 4s · 1s — Wake up & energise</div>
+        </div>
+        <div class="breath-technique-btn" data-in="5" data-hold1="2" data-out="5" data-hold2="2" onclick="selectBreathTechnique(this)">
+          <div style="font-weight:600;font-size:14px">💎 Coherence Breathing</div>
+          <div style="font-size:11px;color:var(--text3)">5s · 2s · 5s · 2s — Heart coherence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-title">⚙️ Custom Timing</div>
+        <button class="btn btn-xs btn-primary" onclick="saveBreathPreset()">Save Preset</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row" style="margin:0"><label>Breathe In (s)</label><input type="number" id="breath-in" value="4" min="1" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Hold In (s)</label><input type="number" id="breath-hold1" value="4" min="0" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Breathe Out (s)</label><input type="number" id="breath-out" value="4" min="1" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+        <div class="form-row" style="margin:0"><label>Hold Out (s)</label><input type="number" id="breath-hold2" value="4" min="0" max="20" onchange="updateBreathDisplay()" oninput="updateBreathDisplay()"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="form-row" style="margin:0"><label>Cycles (0 = infinite)</label><input type="number" id="breath-cycles" value="0" min="0" max="100"></div>
+      </div>
+    </div>
+
+    <div class="med-breath-card">
+      <div class="breath-circle-wrap">
+        <div class="breath-outer-ring" id="breath-outer-ring"></div>
+        <div class="breath-circle" id="breath-circle">
+          <div id="breath-phase-label" style="font-size:15px;font-weight:600;color:#fff;text-align:center;line-height:1.3">Ready</div>
+          <div id="breath-count" style="font-family:'DM Mono',monospace;font-size:32px;font-weight:400;color:rgba(255,255,255,0.9);margin-top:2px">—</div>
+        </div>
+      </div>
+      <div id="breath-cycle-info" style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">Press Start to begin</div>
+      <div style="display:flex;justify-content:center;gap:14px">
+        <button class="timer-btn timer-btn-secondary" onclick="breathReset()" style="width:50px;height:50px">↺</button>
+        <button class="timer-btn" id="breath-btn" onclick="breathToggle()" style="width:68px;height:68px;background:linear-gradient(135deg,#7c6ef7,#3ecfb0);border:none;color:#fff;font-size:26px;box-shadow:0 6px 24px rgba(124,110,247,0.35)">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAVED TIMERS TAB -->
+  <div id="med-tab-saved" class="tab-content section" style="display:none">
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="openAddMedTimer()">+ New Timer</button>
+      <span style="font-size:12px;color:var(--text3)">Save custom meditation sessions</span>
+    </div>
+    <div id="saved-timers-list"></div>
+  </div>
+
+  <!-- STATS TAB -->
+  <div id="med-tab-stats" class="tab-content section" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="med-streak">0</div><div class="stat-label">Streak</div></div>
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="med-today">0</div><div class="stat-label">Today min</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="med-total-sessions">0</div><div class="stat-label">Sessions</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div class="card-title">Meditation History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="med-hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHeatmaps()"></div>
+      </div>
+      <div class="heatmap" id="med-heatmap"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Session Log</div></div>
+      <div id="med-log" style="max-height:260px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+

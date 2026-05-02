@@ -1,0 +1,37 @@
+<!-- ═══════════════════════════════════════ DASHBOARD ═══ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header" id="hdr-dashboard">
+    <div class="page-header-inner">
+      <div class="page-title-wrap">
+        <div class="page-subtitle" id="dash-date-label">Loading…</div>
+        <div class="page-title" id="dash-greeting">Good morning</div>
+        <div class="dash-streak-chip" id="dash-streak-chip">🔥 <span>0-day streak</span></div>
+      </div>
+      <div class="header-actions">
+        <div class="autosave-wrap" id="autosaveDot"><div class="autosave-dot" id="autosaveDotInner"></div><span id="autosaveLabel">Saved</span></div>
+        <button class="menu-btn" aria-label="Search" onclick="openPalette()">🔍</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="stat-grid stat-grid-with-level" id="stat-grid">
+      <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num" id="s-habits">0%</div><div class="stat-label">Habits</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-num" id="s-tasks">0</div><div class="stat-label">Done</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num" id="s-focus">0h</div><div class="stat-label">Focus</div></div>
+      <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num" id="s-streak">0</div><div class="stat-label">Streak</div></div>
+      <div class="stat-card stat-level-tile" id="dash-level-tile" style="--accent:var(--violet);grid-column:span 2;text-align:left"></div>
+    </div>
+    <div id="dash-schedule" style="margin-bottom:14px"></div>
+    <div id="dash-checkin" style="margin-bottom:14px"></div>
+    <div id="dash-timeblocks" style="margin-bottom:14px"></div>
+    <div id="dash-allday" style="margin-bottom:14px"></div>
+    <div id="dash-tasks-due" style="margin-bottom:14px"></div>
+    <div id="dash-heatstrip" style="margin-bottom:14px"></div>
+    <div id="dash-goals" style="margin-bottom:14px"></div>
+    <div id="dash-priorities" style="margin-bottom:14px"></div>
+    <div id="dash-bad-habits" style="margin-bottom:14px"></div>
+  </div>
+  <button class="fab" id="quickCaptureFab" aria-label="Quick capture" onclick="openQuickCapture()">＋</button>
+</div>
+

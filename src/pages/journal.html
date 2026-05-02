@@ -1,0 +1,21 @@
+<!-- ═══════════════════════════════════════ JOURNAL ════ -->
+<div class="page" id="page-journal">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Journal</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openAddJournal()">+ Add Entry</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sort-bar">
+      <label>Sort</label><select id="j-sort" onchange="renderJournal()"><option value="desc">Newest</option><option value="asc">Oldest</option></select>
+      <label>Habit</label><select id="j-habit-filter" onchange="renderJournal()"><option value="">All</option></select>
+      <label>Type</label><select id="j-type-filter" onchange="renderJournal()"><option value="">All</option><option value="avoided">Avoided</option><option value="indulged">Indulged</option></select>
+    </div>
+    <div id="journal-list"></div>
+  </div>
+</div>
+

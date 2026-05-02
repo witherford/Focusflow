@@ -1,0 +1,93 @@
+<!-- ═══════════════════════════════════════ DEEP WORK ════ -->
+<div class="page" id="page-deepwork">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-title">Deep Work</div></div>
+      <div class="header-actions">
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div id="dw-link-banner" style="display:none;background:var(--violet-bg);border:1px solid var(--violet);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
+
+    <div class="ambient-card">
+      <div class="card-header" style="margin-bottom:8px"><div class="card-title">🎧 Ambient Audio</div></div>
+      <select id="dw-ambient" onchange="playAmbient(this.value)">
+        <option value="">🔇 Silence</option>
+        <option value="brown">🤎 Brown Noise — Deep Focus</option>
+        <option value="rain">🌧️ Rain</option>
+        <option value="waves">🌊 Ocean Waves</option>
+      </select>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header"><div class="card-title">Quick Presets</div></div>
+      <div class="preset-grid" id="preset-grid"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Session Timer</div></div>
+        <div class="tabs" style="margin-bottom:14px">
+          <div class="tab active" data-tab="dw-pomo">Pomodoro</div>
+          <div class="tab" data-tab="dw-free">Free Form</div>
+        </div>
+        <div id="dw-pomo" class="tab-content">
+          <div class="timer-ring">
+            <svg viewBox="0 0 200 200"><circle class="timer-ring-bg" cx="100" cy="100" r="90"/><circle class="timer-ring-fill" id="dw-ring" cx="100" cy="100" r="90"/></svg>
+            <div class="timer-inner">
+              <div class="timer-time" id="dw-timer">25:00</div>
+              <div class="timer-phase" id="dw-phase">WORK</div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button class="timer-btn timer-btn-secondary" onclick="dwStopAndLog()" title="Stop &amp; log">↺</button>
+            <button class="timer-btn timer-btn-primary" id="dw-start-btn" onclick="dwToggle()">▶</button>
+            <button class="timer-btn timer-btn-secondary" onclick="dwFullscreen()" title="Fullscreen">⛶</button>
+          </div>
+          <div class="form-row"><label>Work (min)</label><input type="number" id="dw-work" value="25" min="1" max="120" onchange="dwReset()"></div>
+          <div class="form-row"><label>Break (min)</label><input type="number" id="dw-break" value="5" min="1" max="30" onchange="dwReset()"></div>
+          <div class="sep"></div>
+          <div class="card-title" style="margin-bottom:8px;font-size:13px">Timer behaviour</div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-sounds" checked onchange="saveDwCfg()"> Start / end chimes</label></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-auto" checked onchange="saveDwCfg()"> Auto-advance into break / next work block (off = pause between phases)</label></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-announce" checked onchange="saveDwCfg()"> Voice announcements (e.g. "5 minutes remaining")</label></div>
+          <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="dw-cfg-log-partial" checked onchange="saveDwCfg()"> Log partial time on early stop <span style="color:var(--text3);font-size:11px">— e.g. quitting after 12 min logs 12 min toward your goal</span></label></div>
+          <div class="form-row"><label style="font-size:12px">Announce every (min)</label><input type="number" id="dw-cfg-interval" value="5" min="1" max="60" onchange="saveDwCfg()"></div>
+        </div>
+        <div id="dw-free" class="tab-content" style="display:none">
+          <div class="timer-inner" style="position:relative;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <div class="timer-time" id="dw-free-timer">00:00</div>
+          </div>
+          <div class="timer-controls">
+            <button class="timer-btn timer-btn-secondary" onclick="dwFreeReset()">↺</button>
+            <button class="timer-btn timer-btn-primary" id="dw-free-btn" onclick="dwFreeToggle()">▶</button>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:10px"><label>Session label</label><input type="text" id="dw-label" placeholder="What are you working on?"></div>
+        <div class="form-row"><label>Link task (optional — accrues minutes to goal)</label><select id="dw-task-link"><option value="">— none —</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Daily Target</div></div>
+        <div class="form-row"><label>Target hrs/day</label><input type="number" id="dw-target" value="4" min="1" max="16" onchange="saveDwTarget()"></div>
+        <div style="margin:10px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px"><span>Today</span><span id="dw-prog-label">0/4h</span></div>
+          <div class="progress-track"><div class="fill" id="dw-prog-fill" style="background:var(--violet);width:0%"></div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="card-title" style="margin-bottom:10px">Session Log</div>
+        <div id="dw-log" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-header">
+        <div class="card-title">Work History</div>
+        <div style="display:flex;align-items:center;gap:8px"><label style="margin:0;font-size:12px;color:var(--text3)">Months</label><input type="number" id="dw-hm-months" value="1" min="1" max="12" style="width:52px;padding:5px 8px" onchange="renderHeatmaps()"></div>
+      </div>
+      <div class="heatmap" id="dw-heatmap"></div>
+    </div>
+  </div>
+</div>
+

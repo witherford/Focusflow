@@ -1,52 +1,47 @@
-// Habits — Phase 4: counter mode, gestures, tiered streaks
+// Habits page — orchestrates rendering, gestures, modal forms, and CRUD.
+// Schedule helpers, streak math, and the linked-flow dispatch live in sibling
+// modules (schedule.js, streaks.js, linkedFlow.js).
 import { S, today, uid, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
-import { tierFor, streakBadge, DEFAULT_TIERS } from './tierStreak.js';
 import { isCounter, isCumulative, countFor, metOn, increment, complete, reset } from './counterMode.js';
 import { attachHabitGestures } from './gestures.js';
 import { promptHabitJournal } from './journalPrompt.js';
-import { computeStreakWithFreeze } from './streakFreeze.js';
 import { attachReorder, reorderArr } from '../../ui/dragReorder.js';
+import {
+  isHabitActiveToday,
+  readWeekdayPickerValue,
+  setWeekdayPickerValue,
+} from './schedule.js';
+import {
+  streakStatusBadge,
+  linkedHabitBadge,
+  calcStreak,
+  calcBadStreak,
+  renderHabitHeatmap,
+} from './streaks.js';
+import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
+
+// Re-export the helpers main.js / other features import from here so existing
+// import paths (`features/habits/page.js`) keep working.
+export {
+  isHabitActiveOnDate,
+  isHabitActiveToday,
+  readWeekdayPickerValue,
+  setWeekdayPickerValue,
+} from './schedule.js';
+export {
+  streakStatusBadge,
+  linkedHabitBadge,
+  calcStreak,
+  calcBadStreak,
+  renderHabitHeatmap,
+} from './streaks.js';
+export { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
 
 const BLOCKS = ['morning', 'afternoon', 'evening', 'allday'];
 let hbOpen = { morning: true, afternoon: true, evening: true, allday: true };
 const blockIcons = { morning: '☀️', afternoon: '🌤', evening: '🌙', allday: '⏳' };
 const blockLabels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', allday: 'All day' };
-
-const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-// True if the habit is scheduled to run on the given date (a YYYY-MM-DD string).
-// Empty / missing activeDays = every day.
-export function isHabitActiveOnDate(h, dateStr) {
-  if (!h?.activeDays || !Array.isArray(h.activeDays) || h.activeDays.length === 0) return true;
-  const dow = new Date(dateStr + 'T12:00:00').getDay();
-  return h.activeDays.includes(WEEKDAY_SHORT[dow]);
-}
-
-// Convenience for "today".
-export function isHabitActiveToday(h) {
-  return isHabitActiveOnDate(h, today());
-}
-
-const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-// Read the picker into a list of "Mon" / "Tue" ... or null when all 7 are
-// ticked (we treat an empty / undefined `activeDays` as "every day").
-export function readWeekdayPickerValue() {
-  const inputs = document.querySelectorAll('#habit-weekday-picker input[data-day]');
-  const picked = Array.from(inputs).filter(i => i.checked).map(i => i.dataset.day);
-  if (picked.length === 0 || picked.length === 7) return null;
-  return picked;
-}
-
-export function setWeekdayPickerValue(arr) {
-  const inputs = document.querySelectorAll('#habit-weekday-picker input[data-day]');
-  if (!Array.isArray(arr) || arr.length === 0) {
-    inputs.forEach(i => { i.checked = true; });
-  } else {
-    inputs.forEach(i => { i.checked = arr.includes(i.dataset.day); });
-  }
-}
 
 export function collapseHabits() { BLOCKS.forEach(b => hbOpen[b] = false); renderHabitsToday(); }
 export function expandHabits()   { BLOCKS.forEach(b => hbOpen[b] = true); renderHabitsToday(); }
@@ -55,57 +50,12 @@ export function toggleHabitBlock(b) { hbOpen[b] = !hbOpen[b]; renderHabitsToday(
 // Is a habit "done" for today? Works for both binary and counter modes.
 export function doneToday(h) { return metOn(h, today()); }
 
-// ── Streak-goal helpers ────────────────────────────────────────────────────
-const AUTO_BRACKETS = [7, 14, 30, 60, 100, 200, 365];
-
-// Returns the current goal target for a habit. For auto-incremental, walks
-// the bracket list and returns the next bracket above the current streak.
-export function streakGoalTarget(h, streak) {
-  if (!h?.streakGoalMode) return 0;
-  if (h.streakGoalMode === 'number') return Math.max(1, parseInt(h.streakGoalDays) || 0);
-  if (h.streakGoalMode === 'auto') {
-    for (const b of AUTO_BRACKETS) if (streak < b) return b;
-    return AUTO_BRACKETS[AUTO_BRACKETS.length - 1];
-  }
-  return 0;
-}
-
-// Renders the streak status icon + bar shown on every habit row.
-export function streakStatusBadge(h) {
-  const streak = calcStreak(h.id);
-  const target = streakGoalTarget(h, streak);
-  if (!target) {
-    if (streak <= 0) {
-      return `<span class="streak-status" title="No streak yet"><span class="ss-num ss-num-empty">—</span></span>`;
-    }
-    return `<span class="streak-status" title="Current streak"><span class="ss-num">${streak}</span><span class="ss-flame">🔥</span></span>`;
-  }
-  const pct = Math.min(100, Math.round(streak / target * 100));
-  const colour = pct >= 100 ? 'var(--green)' : pct >= 50 ? 'var(--teal)' : 'var(--violet)';
-  return `<span class="streak-status" title="${streak} / ${target}-day goal">
-    <span class="ss-bar"><span class="ss-bar-fill" style="width:${pct}%;background:${colour}"></span></span>
-    <span class="ss-num">${streak}/${target}</span>
-  </span>`;
-}
-
 export function updateHabitGoalFields() {
   const mode = document.getElementById('habit-goal-mode')?.value || '';
   const numWrap = document.getElementById('habit-goal-num-wrap');
   const autoInfo = document.getElementById('habit-goal-auto-info');
   if (numWrap) numWrap.style.display = mode === 'number' ? '' : 'none';
   if (autoInfo) autoInfo.style.display = mode === 'auto' ? '' : 'none';
-}
-
-// Compact badge shown on a linked habit's row. e.g. "🔗 meditate · 15m".
-export function linkedHabitBadge(h) {
-  if (!h?.linkedType) return '';
-  const cfg = h.linkedConfig || {};
-  const tag = h.linkedType;
-  let suffix = '';
-  if (tag === 'meditate' && cfg.duration) suffix = ' · ' + cfg.duration + 'm';
-  else if (tag === 'deepwork' && cfg.mins) suffix = ' · ' + cfg.mins + 'm';
-  else if (tag === 'sleep' && cfg.targetHrs) suffix = ' · ' + cfg.targetHrs + 'h';
-  return `<span class="link-badge" title="Tap the habit to launch its tool">🔗 ${tag}${suffix}</span>`;
 }
 
 // Render a single card body; used by both morning/afternoon/evening and the flat list.
@@ -120,7 +70,6 @@ function renderHabitCard(h, { flat = false } = {}) {
     ? `${count}${isCumulative(h) ? '' : '/' + target}${h.unit ? ' ' + h.unit : ''} · Streak ${streak}d`
     : `Streak: ${streak} day${streak === 1 ? '' : 's'}`;
 
-  // Progress ring for counter, circle check for binary
   const ring = counter
     ? `<svg class="habit-ring" width="40" height="40" viewBox="0 0 40 40">
          <circle class="ring-track" cx="20" cy="20" r="16" />
@@ -135,9 +84,9 @@ function renderHabitCard(h, { flat = false } = {}) {
   const xpAward = (window.XP_TABLE && window.XP_TABLE.habit) || 10;
   const xpChip = `<span class="xp-chip" title="XP awarded on completion">+${xpAward} XP</span>`;
 
-  // Gestures attach to .habit-tap (the inner zone), NOT the row. The
-  // edit / delete buttons live as siblings of .habit-tap, so pointer events
-  // on a button physically cannot bubble into the gesture handler.
+  // Gestures attach to .habit-tap (the inner zone), NOT the row. Edit/delete
+  // buttons live as siblings of .habit-tap, so pointer events on a button
+  // physically cannot bubble into the gesture handler.
   return `<div class="habit-row${done ? ' done' : ''}" data-habit-id="${h.id}">
     <div class="habit-tap">
       ${ring}
@@ -153,10 +102,6 @@ function renderHabitCard(h, { flat = false } = {}) {
   </div>`;
 }
 
-// Wire gesture handlers to the .habit-tap inner zone of each row. Action
-// buttons (✏️ / 🗑) are siblings of .habit-tap, so pointer events on them
-// never reach the gesture handler — no fancy stopPropagation gymnastics
-// needed.
 function wireGestures(container) {
   if (!container) return;
   container.querySelectorAll('.habit-row').forEach(row => {
@@ -187,8 +132,7 @@ function wireGestures(container) {
 
 function handleTap(h) {
   // Linked habits route to their tool with the saved config pre-applied.
-  // Double-tap / triple-tap / long-press still let the user manually
-  // override (mark done without doing the activity, etc.).
+  // Double-tap / triple-tap / long-press still let the user manually override.
   if (h.linkedType) { openLinkedHabit(h); return; }
   if (isCounter(h)) {
     const prev = countFor(h);
@@ -201,113 +145,6 @@ function handleTap(h) {
     return;
   }
   save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
-}
-
-// ── Linked habit dispatch ────────────────────────────────────────────────────
-// Tapping a linked habit sets a transient flow flag, navigates to the right
-// page, and applies the saved config. The corresponding logger reads the
-// flag on session-save and ticks the habit done + awards XP.
-//
-// The flag lives on `window` only — if the user reloads before finishing the
-// session, the flow context is lost (acceptable; they can tap the habit
-// again to reset the context).
-const FLOW_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-export function openLinkedHabit(h) {
-  if (!h?.linkedType) return;
-  window._ffSessionFlow = { habitId: h.id, kind: h.linkedType, setAt: Date.now() };
-  const cfg = h.linkedConfig || {};
-  if (h.linkedType === 'meditate') {
-    window.goPage?.('meditation');
-    setTimeout(() => applyLinkedMeditationConfig(cfg), 60);
-  } else if (h.linkedType === 'deepwork') {
-    window.goPage?.('deepwork');
-    setTimeout(() => applyLinkedDeepworkConfig(cfg), 60);
-  } else if (h.linkedType === 'train') {
-    window.goPage?.('fitness');
-  } else if (h.linkedType === 'sleep') {
-    window.goPage?.('sleep');
-    setTimeout(() => applyLinkedSleepConfig(cfg), 60);
-  } else if (h.linkedType === 'journal') {
-    // Journal lives behind a modal — open the modal directly. The journal
-    // page must be the active page so the modal's parent exists.
-    window.goPage?.('journal');
-    setTimeout(() => applyLinkedJournalConfig(cfg), 60);
-  } else if (h.linkedType === 'weight') {
-    window.goPage?.('weight');
-    setTimeout(() => applyLinkedWeightConfig(cfg), 60);
-  }
-}
-
-function applyLinkedSleepConfig(cfg) {
-  // Sleep page renders form fields that already default to today's date and
-  // sensible bedtimes. Only thing to surface is a target-hours hint.
-  if (cfg.targetHrs) window.toast?.(`😴 Sleep — target ${cfg.targetHrs}h`);
-  else window.toast?.('😴 Log tonight\'s sleep');
-}
-
-function applyLinkedJournalConfig(cfg) {
-  // Open the existing journal entry modal pre-filled with the prompt as
-  // placeholder text, then focus the textarea.
-  if (typeof window.openAddJournal === 'function') window.openAddJournal();
-  setTimeout(() => {
-    const ta = document.getElementById('j-text');
-    if (ta) {
-      if (cfg.prompt) ta.placeholder = cfg.prompt;
-      ta.focus();
-    }
-  }, 80);
-  window.toast?.('📓 New journal entry');
-}
-
-function applyLinkedWeightConfig(_cfg) {
-  // Weight page already renders a fresh log form. Just announce.
-  window.toast?.('⚖️ Log today\'s weight');
-}
-
-function applyLinkedMeditationConfig(cfg) {
-  // Apply ambient sound first.
-  if (typeof window.playAmbient === 'function') window.playAmbient(cfg.sound || '');
-  document.querySelectorAll('.med-sound-btn').forEach(b => b.classList.toggle('active', b.dataset.sound === (cfg.sound || '')));
-  // Then guided script (this also pre-fills duration with the script's default).
-  if (cfg.guidedScriptId && typeof window.selectGuided === 'function') window.selectGuided(cfg.guidedScriptId);
-  else if (typeof window.clearGuided === 'function') window.clearGuided();
-  // The user's saved duration takes priority — apply it last.
-  const dur = document.getElementById('med-dur'); if (dur && cfg.duration) dur.value = cfg.duration;
-  if (typeof window.medReset === 'function') window.medReset();
-  window.toast?.('🧘 Meditation pre-loaded — hit ▶ when ready');
-}
-
-function applyLinkedDeepworkConfig(cfg) {
-  const w = document.getElementById('dw-work'); if (w && cfg.mins) w.value = cfg.mins;
-  const b = document.getElementById('dw-break'); if (b && cfg.breakMins) b.value = cfg.breakMins;
-  const lbl = document.getElementById('dw-label'); if (lbl) lbl.value = cfg.label || lbl.value;
-  if (typeof window.dwReset === 'function') window.dwReset();
-  window.toast?.('🧠 Deep-work pre-loaded — hit ▶ when ready');
-}
-
-// Called by med / dw / training loggers on session save. Auto-ticks the
-// habit, awards XP, refreshes UI. No-op if the flow doesn't match or has
-// expired.
-export function markHabitDoneFromFlow(kind) {
-  const flow = window._ffSessionFlow;
-  if (!flow || flow.kind !== kind) return false;
-  if (Date.now() - (flow.setAt || 0) > FLOW_TTL_MS) { window._ffSessionFlow = null; return false; }
-  const h = (S.habits || []).find(x => x.id === flow.habitId);
-  if (!h) { window._ffSessionFlow = null; return false; }
-  // Tick today (binary)
-  if (!S.habitLog[today()]) S.habitLog[today()] = {};
-  const wasDone = !!S.habitLog[today()][h.id];
-  S.habitLog[today()][h.id] = true;
-  if (!wasDone) {
-    haptic('medium');
-    window.awardXP?.('habit');
-    window.toast?.(`✓ Habit ticked: ${h.name}`);
-  }
-  window._ffSessionFlow = null;
-  save();
-  renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
-  return true;
 }
 
 function handleDoubleTap(h) {
@@ -377,14 +214,13 @@ export function renderHabitsToday() {
       attachReorder(listEl, {
         itemSelector: '.habit-row',
         onReorder: (from, to) => {
-          // Map block-local indices back to S.habits indices.
           const blockIds = bH.map(h => h.id);
           const movedId = blockIds[from];
           const targetId = blockIds[to];
           const fromGlobal = S.habits.findIndex(h => h.id === movedId);
           let toGlobal = S.habits.findIndex(h => h.id === targetId);
           if (fromGlobal < 0 || toGlobal < 0) return;
-          if (fromGlobal < toGlobal) toGlobal -= 1; // splice index after removal
+          if (fromGlobal < toGlobal) toGlobal -= 1;
           const [item] = S.habits.splice(fromGlobal, 1);
           S.habits.splice(Math.max(0, Math.min(S.habits.length, toGlobal + (from < to ? 1 : 0))), 0, item);
           save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
@@ -415,7 +251,6 @@ export function renderHabitsAll() {
 }
 
 function renderHabitTemplateChips() {
-  // Lazy import-safe — templates module attaches to window
   const tmpl = window._habitTemplates || [];
   return tmpl.map((t, i) => `<button class="btn btn-sm" onclick="_applyHabitTemplateByIdx(${i})">${t.icon} ${t.name}</button>`).join('');
 }
@@ -443,12 +278,8 @@ function populateLinkedGuidedSelect(selectedId) {
   sel.innerHTML = '<option value="">— None (silent) —</option>' + lib.map(g => `<option value="${g.id}"${g.id === selectedId ? ' selected' : ''}>${g.icon} ${g.name} (${g.mins}m default)</option>`).join('');
 }
 
-// Show / hide the per-type config block based on the dropdown choice. Also
-// hides the regular mode + all-day fields when the habit is linked, since
-// linked habits are always binary "did the activity = done".
 // Show / hide fields based on whether the habit is good or bad. Bad habits
-// don't support linked tools, counters, all-day, or streak goals (their
-// streak is implicit from indulged-day breaks).
+// don't support linked tools, counters, all-day, or streak goals.
 export function updateHabitKindFields() {
   const isBad = (document.getElementById('habit-kind')?.value === 'bad');
   const linkRow = document.getElementById('habit-link-type')?.closest('.form-row');
@@ -457,13 +288,11 @@ export function updateHabitKindFields() {
   if (linkRow) linkRow.style.display = isBad ? 'none' : '';
   if (linkInfo && linkInfo.style) linkInfo.style.display = isBad ? 'none' : '';
   if (badInfo) badInfo.style.display = isBad ? '' : 'none';
-  // Hide all linked-config blocks when bad habit
   if (isBad) {
     ['meditate','train','deepwork','sleep','journal','weight'].forEach(k => {
       const el = document.getElementById('linked-config-' + k); if (el) el.style.display = 'none';
     });
     const lt = document.getElementById('habit-link-type'); if (lt) lt.value = '';
-    // Force binary, hide counter/all-day
     const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
     const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
     const counterWrap = document.getElementById('habit-counter-fields');
@@ -472,7 +301,6 @@ export function updateHabitKindFields() {
     if (counterWrap) counterWrap.style.display = 'none';
     const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
   } else {
-    // Restore visibility (linked-fields handler will re-evaluate too)
     const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
     const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
     if (modeRow) modeRow.style.display = '';
@@ -488,7 +316,6 @@ export function updateLinkedHabitFields() {
     if (el) el.style.display = v === k ? '' : 'none';
   });
   const linked = !!v;
-  // When linked: force binary mode and hide all-day / counter / mode controls.
   const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
   const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
   const counterWrap = document.getElementById('habit-counter-fields');
@@ -515,7 +342,6 @@ export function openAddHabit() {
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = false;
   const upEl = document.getElementById('habit-unit-preset'); if (upEl) upEl.value = '';
   const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = '';
-  // Linked-habit defaults
   const lt = document.getElementById('habit-link-type'); if (lt) lt.value = '';
   const lmd = document.getElementById('linked-med-dur'); if (lmd) lmd.value = 10;
   const lms = document.getElementById('linked-med-sound'); if (lms) lms.value = '';
@@ -525,7 +351,6 @@ export function openAddHabit() {
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = '';
   const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = '';
   const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = '';
-  // Streak goal defaults
   const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = '';
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = '';
   setWeekdayPickerValue(null);
@@ -553,7 +378,6 @@ export function openEditHabit(id) {
   const jpEl = document.getElementById('habit-journal-prompt'); if (jpEl) jpEl.checked = h.journalPrompt !== false;
   const adEl = document.getElementById('habit-allday'); if (adEl) adEl.checked = !!h.allDay;
   const wyEl = document.getElementById('habit-why'); if (wyEl) wyEl.value = h.whyMatters || '';
-  // Linked-habit fields
   const lt = document.getElementById('habit-link-type'); if (lt) lt.value = h.linkedType || '';
   const lc = h.linkedConfig || {};
   const lmd = document.getElementById('linked-med-dur'); if (lmd) lmd.value = lc.duration ?? 10;
@@ -564,7 +388,6 @@ export function openEditHabit(id) {
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
   const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = lc.targetHrs ?? '';
   const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = lc.prompt || '';
-  // Streak goal
   const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = h.streakGoalMode || '';
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = h.streakGoalDays ?? '';
   setWeekdayPickerValue(h.activeDays);
@@ -594,7 +417,6 @@ export function applyUnitPreset() {
   const v = document.getElementById('habit-unit-preset')?.value;
   if (!v) return;
   const u = document.getElementById('habit-unit'); if (u) u.value = v;
-  // Sensible defaults for step + target when nothing set
   const target = document.getElementById('habit-target');
   const step = document.getElementById('habit-step');
   const defs = { ml: { t: 2000, s: 250 }, l: { t: 2, s: 0.25 }, glasses: { t: 8, s: 1 }, cups: { t: 6, s: 1 }, minutes: { t: 30, s: 5 }, hours: { t: 1, s: 0.25 }, steps: { t: 10000, s: 500 }, miles: { t: 5, s: 0.5 }, km: { t: 8, s: 1 }, pages: { t: 20, s: 5 }, reps: { t: 100, s: 10 }, sets: { t: 10, s: 1 } };
@@ -680,39 +502,6 @@ export function deleteHabit(id) {
   window.toastUndo?.(`Deleted "${removed.name}"`, () => {
     S.habits.splice(idx, 0, removed);
     save(); renderHabitsToday(); renderHabitsAll(); window.renderDash?.();
-  });
-}
-
-// Streak = consecutive days from today backward where the habit was "met" (with auto-freeze).
-// Bad habits use a different rule: streak = consecutive days back without an "indulged" entry.
-export function calcStreak(id) {
-  const h = S.habits.find(x => x.id === id); if (!h) return 0;
-  if (h.kind === 'bad') return calcBadStreak(h);
-  const { streak } = computeStreakWithFreeze(h);
-  h.tier = tierFor(streak, h.tierBase || DEFAULT_TIERS);
-  return streak;
-}
-
-export function calcBadStreak(h) {
-  const log = S.badHabitLog || {};
-  let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const k = new Date(Date.now() - i * 864e5).toISOString().split('T')[0];
-    const v = log[k]?.[h.id];
-    if (v === 'indulged') break;
-    if (v === 'avoided') streak++;
-    // Unmarked days neither break nor count toward the streak.
-  }
-  return streak;
-}
-
-export function renderHabitHeatmap() {
-  window.renderHM('heatmap-grid', parseInt(document.getElementById('hm-months')?.value || 1) * 30, k => {
-    const total = S.habits.length;
-    if (!total) return { l: 0, title: k + ': 0/0' };
-    const done = S.habits.filter(h => metOn(h, k)).length;
-    const pct = done / total;
-    return { l: done === 0 ? 0 : pct < .25 ? 1 : pct < .5 ? 2 : pct < 1 ? 3 : 4, title: k + ': ' + done + '/' + total };
   });
 }
 
