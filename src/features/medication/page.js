@@ -105,7 +105,7 @@ function renderTimeRow(time = '08:00') {
   const row = document.createElement('div');
   row.className = 'med-time-row';
   row.style.cssText = 'display:flex;gap:6px;margin-bottom:4px;align-items:center';
-  row.innerHTML = `<input type="time" value="${time}" style="flex:1"><button type="button" class="btn btn-xs" title="Remove">×</button>`;
+  row.innerHTML = `<span style="font-size:11px;color:var(--text3);width:34px">Time</span><input type="time" value="${time}" style="flex:1"><button type="button" class="btn btn-xs" title="Remove time">Remove</button>`;
   row.querySelector('button').onclick = () => row.remove();
   wrap.appendChild(row);
 }
