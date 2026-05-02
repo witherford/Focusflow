@@ -13,6 +13,9 @@ export let S = {
   ]},
   meditation: { target:10, sessions:[], savedTimers:[], breathPresets:[] },
   shopping:[], journal:[],
+  meds: [], medGroups: [], medLog: {},
+  diet: { goal: 'maintain', calorieAdjust: 0, manualTDEEOverride: null, log: {} },
+  dietGroups: [], meals: [],
   customCats: { shop:[], proj:[], goal:[] },
   settings: { theme:'dark', aiEnabled:true },
 };

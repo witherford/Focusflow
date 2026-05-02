@@ -5,8 +5,10 @@
 // Legacy stacks may have embedded child objects (`{ id, name, icon, ... }`);
 // resolveChild() handles both shapes so old data keeps working.
 import { S } from '../../core/state.js';
+import { attachReorder, reorderArr } from '../../ui/dragReorder.js';
 
 const editing = { 'habit-': [], 'qc-': [] };
+const reorderDetach = { 'habit-': null, 'qc-': null };
 
 function pickerId(prefix) { return prefix + 'stack-picker'; }
 function listId(prefix)   { return prefix + 'stack-list'; }
@@ -55,6 +57,7 @@ function populatePicker(prefix) {
 function renderList(prefix) {
   const wrap = document.getElementById(listId(prefix)); if (!wrap) return;
   const list = editing[prefix];
+  if (reorderDetach[prefix]) { try { reorderDetach[prefix](); } catch {} reorderDetach[prefix] = null; }
   if (!list.length) {
     wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0">No habits added yet — pick one above and tap +</div>';
     return;
@@ -62,17 +65,26 @@ function renderList(prefix) {
   wrap.innerHTML = list.map((c, i) => {
     const h = resolveChild(c);
     if (!h) {
-      return `<div class="stack-child-chip" style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--rose);border-radius:var(--r-sm);margin-bottom:4px;font-size:13px;color:var(--rose)">⚠️ Missing habit <button type="button" class="btn btn-xs" onclick="removeHabitStackChild('${prefix}', ${i})" style="margin-left:auto">×</button></div>`;
+      return `<div class="stack-child-chip stack-child-row" data-stack-child-idx="${i}" style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--rose);border-radius:var(--r-sm);margin-bottom:4px;font-size:13px;color:var(--rose)"><span class="stack-drag-handle" style="cursor:grab;padding:0 4px;color:var(--text3);user-select:none;touch-action:none" title="Drag to reorder">≡</span>⚠️ Missing habit <button type="button" class="btn btn-xs" onclick="removeHabitStackChild('${prefix}', ${i})" style="margin-left:auto">×</button></div>`;
     }
     const icon = h.icon || (h.kind === 'bad' ? '🚫' : '●');
     const meta = `${h.kind === 'bad' ? 'bad · ' : ''}${h.mode === 'counter' ? 'counter' : 'binary'}`;
-    return `<div class="stack-child-chip" style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;font-size:13px">
+    return `<div class="stack-child-chip stack-child-row" data-stack-child-idx="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;font-size:13px">
+      <span class="stack-drag-handle" style="cursor:grab;color:var(--text3);user-select:none;touch-action:none;font-size:14px;line-height:1" title="Drag to reorder">≡</span>
       <span style="color:var(--text3);font-family:'DM Mono',monospace;width:16px;text-align:center">${i + 1}</span>
       <span style="flex:1">${icon} ${h.name}</span>
       <span style="font-size:10px;color:var(--text3)">${meta}</span>
       <button type="button" class="btn btn-xs" onclick="removeHabitStackChild('${prefix}', ${i})" title="Remove" style="padding:2px 8px">×</button>
     </div>`;
   }).join('');
+  reorderDetach[prefix] = attachReorder(wrap, {
+    itemSelector: '.stack-child-row',
+    handleSelector: '.stack-drag-handle',
+    onReorder: (from, to) => {
+      reorderArr(editing[prefix], from, to);
+      refresh(prefix);
+    },
+  });
 }
 
 function refresh(prefix) { populatePicker(prefix); renderList(prefix); }

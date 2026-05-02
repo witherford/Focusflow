@@ -51,6 +51,8 @@
     <div class="nav-item" data-page="fitness"><span class="nav-emoji">🏋️</span> Training</div>
     <div class="nav-item" data-page="weight"><span class="nav-emoji">⚖️</span> Weight</div>
     <div class="nav-item" data-page="sleep"><span class="nav-emoji">😴</span> Sleep</div>
+    <div class="nav-item" data-page="medication"><span class="nav-emoji">💊</span> Medication & Supplements</div>
+    <div class="nav-item" data-page="diet"><span class="nav-emoji">🍽</span> Diet</div>
     <div class="nav-section">Life</div>
     <div class="nav-item" data-page="shopping"><span class="nav-emoji">🛒</span> Shopping</div>
     <div class="nav-item" data-page="journal"><span class="nav-emoji">📓</span> Journal</div>
@@ -266,6 +268,8 @@ Review with team | low | | first pass only"></textarea></div>
     <option value="sleep">😴 Sleep log</option>
     <option value="journal">📓 Journal</option>
     <option value="weight">⚖️ Weight log</option>
+    <option value="medication">💊 Medication / Supplement</option>
+    <option value="diet">🍽 Diet / Meal</option>
   </select></div>
   <div style="font-size:11px;color:var(--text3);margin:-6px 0 8px">A linked habit jumps to its tool with your settings pre-applied. Completing the activity ticks the habit and grants XP automatically.</div>
 
@@ -307,6 +311,18 @@ Review with team | low | | first pass only"></textarea></div>
   <div id="linked-config-weight" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
     <div class="card-title" style="margin-bottom:8px;font-size:12px">⚖️ Weight log</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.5">Tapping the habit jumps to the Weight page. Logging today's weight auto-ticks it.</div>
+  </div>
+
+  <div id="linked-config-medication" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">💊 Medication / Supplement</div>
+    <div class="form-row" style="margin-bottom:0"><label>Pick item</label><select id="linked-med-ref"></select></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Tapping the habit jumps to the Medication page focused on this item. Marking a dose taken auto-ticks the habit.</div>
+  </div>
+
+  <div id="linked-config-diet" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">
+    <div class="card-title" style="margin-bottom:8px;font-size:12px">🍽 Diet / Meal</div>
+    <div class="form-row" style="margin-bottom:0"><label>Pick meal</label><select id="linked-diet-ref"></select></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Ticking the habit logs the chosen meal for today and deducts from your daily target.</div>
   </div>
 
   <div class="form-grid">
@@ -562,7 +578,12 @@ Review with team | low | | first pass only"></textarea></div>
         <option value="sleep">😴 Sleep log</option>
         <option value="journal">📓 Journal</option>
         <option value="weight">⚖️ Weight log</option>
+        <option value="medication">💊 Medication / Supplement</option>
+        <option value="diet">🍽 Diet / Meal</option>
       </select>
+    </div>
+    <div class="form-row" id="qc-link-ref-row" style="display:none"><label>Linked item</label>
+      <select id="qc-habit-link-ref"></select>
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Kind</label><select id="qc-habit-kind">

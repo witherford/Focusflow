@@ -336,7 +336,7 @@ export function updateHabitKindFields() {
   if (linkInfo && linkInfo.style) linkInfo.style.display = isBad ? 'none' : '';
   if (badInfo) badInfo.style.display = isBad ? '' : 'none';
   if (isBad) {
-    ['meditate','train','deepwork','sleep','journal','weight'].forEach(k => {
+    ['meditate','train','deepwork','sleep','journal','weight','medication','diet'].forEach(k => {
       const el = document.getElementById('linked-config-' + k); if (el) el.style.display = 'none';
     });
     const lt = document.getElementById('habit-link-type'); if (lt) lt.value = '';
@@ -358,10 +358,33 @@ export function updateHabitKindFields() {
 
 export function updateLinkedHabitFields() {
   const v = document.getElementById('habit-link-type')?.value || '';
-  ['meditate', 'train', 'deepwork', 'sleep', 'journal', 'weight'].forEach(k => {
+  ['meditate', 'train', 'deepwork', 'sleep', 'journal', 'weight', 'medication', 'diet'].forEach(k => {
     const el = document.getElementById('linked-config-' + k);
     if (el) el.style.display = v === k ? '' : 'none';
   });
+  // Populate ref pickers if needed
+  if (v === 'medication') {
+    const ref = document.getElementById('linked-med-ref');
+    if (ref && window.listMedsForPicker) {
+      const cur = ref.value;
+      const items = window.listMedsForPicker();
+      ref.innerHTML = items.length
+        ? items.map(m => `<option value="${m.id}">${m.kind === 'supplement' ? '🌿' : '💊'} ${m.name}</option>`).join('')
+        : '<option value="">— add a medication on the Medication page first —</option>';
+      if (cur) ref.value = cur;
+    }
+  }
+  if (v === 'diet') {
+    const ref = document.getElementById('linked-diet-ref');
+    if (ref && window.listMealsForPicker) {
+      const cur = ref.value;
+      const items = window.listMealsForPicker();
+      ref.innerHTML = items.length
+        ? items.map(m => `<option value="${m.id}">🍽 ${m.name}</option>`).join('')
+        : '<option value="">— add a meal on the Diet page first —</option>';
+      if (cur) ref.value = cur;
+    }
+  }
   const linked = !!v;
   const modeRow = document.getElementById('habit-mode')?.closest('.form-row');
   const allDayRow = document.getElementById('habit-allday')?.closest('.form-row');
@@ -509,6 +532,8 @@ export function openEditHabit(id) {
   const ldl = document.getElementById('linked-dw-label'); if (ldl) ldl.value = lc.label || '';
   const lst = document.getElementById('linked-sleep-target'); if (lst) lst.value = lc.targetHrs ?? '';
   const ljp = document.getElementById('linked-journal-prompt'); if (ljp) ljp.value = lc.prompt || '';
+  const lmref = document.getElementById('linked-med-ref'); if (lmref) lmref.value = h.linkedRefId || lc.refId || '';
+  const ldref = document.getElementById('linked-diet-ref'); if (ldref) ldref.value = h.linkedRefId || lc.refId || '';
   const sgm = document.getElementById('habit-goal-mode'); if (sgm) sgm.value = h.streakGoalMode || '';
   const sgd = document.getElementById('habit-goal-days'); if (sgd) sgd.value = h.streakGoalDays ?? '';
   setWeekdayPickerValue(h.activeDays);
@@ -589,10 +614,15 @@ export function saveHabit() {
     linkedConfig = { prompt: (document.getElementById('linked-journal-prompt')?.value || '').trim() };
   } else if (linkedType === 'weight') {
     linkedConfig = {};
+  } else if (linkedType === 'medication') {
+    linkedConfig = { refId: document.getElementById('linked-med-ref')?.value || null };
+  } else if (linkedType === 'diet') {
+    linkedConfig = { refId: document.getElementById('linked-diet-ref')?.value || null };
   }
   // Linked habits are always binary toggles, never counters / all-day.
   const effectiveMode = linkedType ? 'binary' : (allDay ? 'counter' : mode);
-  const linkedIconMap = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️' };
+  const linkedIconMap = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️', medication: '💊', diet: '🍽' };
+  const linkedRefId = (linkedType === 'medication' || linkedType === 'diet') ? (linkedConfig?.refId || null) : null;
   const kind = document.getElementById('habit-kind')?.value === 'bad' ? 'bad' : 'good';
   const data = {
     name,
@@ -606,6 +636,7 @@ export function saveHabit() {
     whyMatters,
     linkedType,
     linkedConfig,
+    linkedRefId,
     streakGoalMode: document.getElementById('habit-goal-mode')?.value || null,
     streakGoalDays: parseInt(document.getElementById('habit-goal-days')?.value) || null,
     activeDays: readWeekdayPickerValue(),

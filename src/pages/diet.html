@@ -1,0 +1,102 @@
+<!-- ═══════════════════════════════════════ DIET ════════ -->
+<div class="page" id="page-diet">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Nutrition</div><div class="page-title">Diet</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm" onclick="openDietGroupModal()">+ Group</button>
+        <button class="btn btn-sm btn-primary" onclick="openMealModal()">+ Meal</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:13px;color:var(--text2);line-height:1.55">
+        Build a meal database with full calorie/macro/micronutrient breakdowns, set a daily target
+        based on your weight + goal, log today's meals, and optionally surface scheduled meals
+        as habits in the dashboard.
+      </div>
+    </div>
+    <div id="diet-summary" style="margin-bottom:14px"></div>
+    <div id="diet-settings" style="margin-bottom:14px"></div>
+    <div class="tabs-wrap"><div class="tabs">
+      <div class="tab active" data-diet-tab="today">Today</div>
+      <div class="tab" data-diet-tab="db">Meal database</div>
+    </div></div>
+    <div id="diet-today" class="diet-tab-content"></div>
+    <div id="diet-db" class="diet-tab-content" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Meal modal -->
+<div class="modal-overlay" id="m-meal" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div class="modal-title" id="m-meal-title" style="margin:0">Add meal</div>
+    <button class="btn-icon" onclick="closeModal('m-meal')">✕</button>
+  </div>
+  <div class="form-row"><label>Name</label><input type="text" id="meal-name" autocapitalize="sentences"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Type</label><select id="meal-type">
+      <option value="meal">🍽 Meal</option>
+      <option value="snack">🍎 Snack</option>
+      <option value="drink">🥤 Drink</option>
+      <option value="shake">🥛 Shake</option>
+    </select></div>
+    <div class="form-row"><label>Group</label><select id="meal-group"></select></div>
+  </div>
+  <div class="form-row"><label>Active days <span style="color:var(--text3);font-size:11px;font-weight:400;margin-left:6px">untick days you don't have it</span></label>
+    <div id="meal-weekday-picker" class="weekday-picker">
+      <label class="wd-pill"><input type="checkbox" data-day="Mon" checked><span>M</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Tue" checked><span>T</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Wed" checked><span>W</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Thu" checked><span>T</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Fri" checked><span>F</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Sat" checked><span>S</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Sun" checked><span>S</span></label>
+    </div>
+  </div>
+  <div class="form-row"><label>Time (optional)</label><input type="time" id="meal-time"></div>
+  <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="meal-as-habit"> Add as habit (appears in dashboard time-block; ticking logs the meal today)
+  </label></div>
+
+  <div style="margin:8px 0 4px;font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Foods</div>
+  <div id="meal-foods-list"></div>
+  <button type="button" class="btn btn-xs" onclick="addMealFood()" style="margin-top:6px">+ Add food</button>
+
+  <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:var(--r-sm);font-size:12px" id="meal-totals">
+    <strong>Totals:</strong> 0 kcal · P 0g · C 0g · F 0g
+  </div>
+
+  <input type="hidden" id="meal-edit-id">
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveMeal()">Save</button>
+    <button class="btn" onclick="closeModal('m-meal')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Diet group modal -->
+<div class="modal-overlay" id="m-diet-group" style="display:none"><div class="modal" style="max-width:380px">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-diet-group-title">New group</div>
+  <div class="form-row"><label>Group name</label><input type="text" id="diet-group-name" autocapitalize="sentences"></div>
+  <input type="hidden" id="diet-group-edit-id">
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveDietGroup()">Save</button>
+    <button class="btn" onclick="closeModal('m-diet-group')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Pick meal to log today -->
+<div class="modal-overlay" id="m-meal-pick" style="display:none"><div class="modal" style="max-width:420px">
+  <div class="modal-handle"></div>
+  <div class="modal-title">Add meal to today</div>
+  <div class="form-row"><label>Meal</label><select id="meal-pick-id"></select></div>
+  <div class="form-row"><label>Servings</label><input type="number" id="meal-pick-servings" min="0.25" step="0.25" value="1"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-primary" style="flex:1" onclick="logMealToday()">Add</button>
+    <button class="btn" onclick="closeModal('m-meal-pick')">Cancel</button>
+  </div>
+</div></div>

@@ -54,6 +54,12 @@ function extractCore(state) {
     training: state.training || null,
     badHabitLog: state.badHabitLog || {},
     sleepHabitLog: state.sleepHabitLog || {},
+    meds: state.meds || [],
+    medGroups: state.medGroups || [],
+    medLog: state.medLog || {},
+    diet: state.diet || { goal: 'maintain', calorieAdjust: 0, manualTDEEOverride: null, log: {} },
+    dietGroups: state.dietGroups || [],
+    meals: state.meals || [],
   };
 }
 
@@ -77,6 +83,12 @@ function mergeCore(core) {
     bodyMeasurements: core.bodyMeasurements || [],
     sleepLog: core.sleepLog || [],
     training: core.training || null,
+    meds: core.meds || [],
+    medGroups: core.medGroups || [],
+    medLog: core.medLog || {},
+    diet: core.diet || { goal: 'maintain', calorieAdjust: 0, manualTDEEOverride: null, log: {} },
+    dietGroups: core.dietGroups || [],
+    meals: core.meals || [],
   });
   // Merge into existing nested objects so we don't clobber sessions arrays
   S.deepwork = { ...S.deepwork, target: core.deepwork.target, presets: core.deepwork.presets };

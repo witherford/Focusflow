@@ -33,6 +33,24 @@ export function openLinkedHabit(h) {
   } else if (h.linkedType === 'weight') {
     window.goPage?.('weight');
     setTimeout(() => applyLinkedWeightConfig(cfg), 60);
+  } else if (h.linkedType === 'medication') {
+    window.goPage?.('medication');
+    window.toast?.('💊 Medication');
+  } else if (h.linkedType === 'diet') {
+    // Ticking a diet-linked habit logs its meal directly + ticks the habit.
+    if (h.linkedRefId && window.logMealFromHabitTick) {
+      window.logMealFromHabitTick(h.linkedRefId);
+    }
+    if (!S.habitLog[today()]) S.habitLog[today()] = {};
+    const wasDone = !!S.habitLog[today()][h.id];
+    S.habitLog[today()][h.id] = true;
+    if (!wasDone) {
+      haptic('medium');
+      window.awardXP?.('habit');
+      window.toast?.(`✓ Logged: ${h.name}`);
+    }
+    save();
+    window.renderHabitsToday?.(); window.renderHabitsAll?.(); window.renderDash?.();
   }
 }
 

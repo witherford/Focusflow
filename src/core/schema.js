@@ -29,6 +29,9 @@ export function defaultState() {
     meditation: { target:10, sessions:[], savedTimers:[], breathPresets:[] },
     fitness: { modalities: [], sessions: [], prs: [] },
     shopping: [], journal: [],
+    meds: [], medGroups: [], medLog: {},
+    diet: { goal: 'maintain', calorieAdjust: 0, manualTDEEOverride: null, log: {} },
+    dietGroups: [], meals: [],
     customCats: { shop:[], proj:[], goal:[] },
     settings: { theme:'dark', aiEnabled:true, incrementalHabits:false, passcodeHash:null, passcodeSalt:null },
   };

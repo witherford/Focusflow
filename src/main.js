@@ -103,6 +103,8 @@ import './features/settings/cloudSyncUI.js';
 import { applyFeatureVisibility } from './features/settings/featureToggles.js';
 import { startIconNormalizer } from './ui/icons.js';
 import { renderBottomNav } from './ui/bottomNav.js';
+import { renderMedication } from './features/medication/page.js';
+import { renderDiet } from './features/diet/page.js';
 window._habitTemplates = HABIT_TEMPLATES;
 window._applyHabitTemplateByIdx = i => applyHabitTemplate(HABIT_TEMPLATES[i]);
 
@@ -126,6 +128,8 @@ export function renderPage(id) {
     case 'weight':      renderWeight(); break;
     case 'sleep':       renderSleep(); break;
     case 'docs':        renderDocs(); break;
+    case 'medication':  renderMedication(); break;
+    case 'diet':        renderDiet(); break;
   }
 }
 
@@ -147,6 +151,8 @@ export function renderAll() {
   safe(renderSleep, 'sleep');
   safe(renderJournal, 'journal');
   safe(renderProfile, 'profile'); safe(renderCustomCats, 'profile.cats');
+  safe(renderMedication, 'medication');
+  safe(renderDiet, 'diet');
   safe(renderPasscodeSection, 'settings.passcode');
   safe(renderDocs, 'docs');
 }

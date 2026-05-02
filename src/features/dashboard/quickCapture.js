@@ -6,7 +6,7 @@ import { S, today, uid, haptic } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
 import { resetStackChildren, readStackChildren, populateStackChildren } from '../habits/stackForm.js';
 
-const LINKED_ICON = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️' };
+const LINKED_ICON = { meditate: '🧘', train: '🏋️', deepwork: '🧠', sleep: '😴', journal: '📓', weight: '⚖️', medication: '💊', diet: '🍽' };
 function defaultLinkedConfig(linkedType) {
   if (linkedType === 'meditate') return { duration: 10, sound: '', guidedScriptId: null };
   if (linkedType === 'deepwork') return { mins: 25, breakMins: 5, label: '' };
@@ -14,8 +14,34 @@ function defaultLinkedConfig(linkedType) {
   if (linkedType === 'sleep') return {};
   if (linkedType === 'journal') return { prompt: '' };
   if (linkedType === 'weight') return {};
+  if (linkedType === 'medication') return { refId: null };
+  if (linkedType === 'diet') return { refId: null };
   return null;
 }
+
+function qcUpdateLinkRefPicker() {
+  const lt = document.getElementById('qc-habit-link-type')?.value || '';
+  const row = document.getElementById('qc-link-ref-row');
+  const sel = document.getElementById('qc-habit-link-ref');
+  if (!row || !sel) return;
+  if (lt === 'medication' && window.listMedsForPicker) {
+    const items = window.listMedsForPicker();
+    sel.innerHTML = items.length
+      ? items.map(m => `<option value="${m.id}">${m.kind === 'supplement' ? '🌿' : '💊'} ${m.name}</option>`).join('')
+      : '<option value="">— none yet —</option>';
+    row.style.display = '';
+  } else if (lt === 'diet' && window.listMealsForPicker) {
+    const items = window.listMealsForPicker();
+    sel.innerHTML = items.length
+      ? items.map(m => `<option value="${m.id}">🍽 ${m.name}</option>`).join('')
+      : '<option value="">— none yet —</option>';
+    row.style.display = '';
+  } else {
+    row.style.display = 'none';
+    sel.innerHTML = '';
+  }
+}
+window.qcUpdateLinkRefPicker = qcUpdateLinkRefPicker;
 
 export function openQuickCapture() {
   haptic('light');
@@ -25,7 +51,8 @@ export function openQuickCapture() {
   const k = document.getElementById('qc-habit-kind'); if (k) k.value = 'good';
   const b = document.getElementById('qc-habit-block'); if (b) b.value = 'morning';
   const m = document.getElementById('qc-habit-mode'); if (m) m.value = 'binary';
-  const lt = document.getElementById('qc-habit-link-type'); if (lt) lt.value = '';
+  const lt = document.getElementById('qc-habit-link-type'); if (lt) { lt.value = ''; lt.onchange = qcUpdateLinkRefPicker; }
+  qcUpdateLinkRefPicker();
   const stk = document.getElementById('qc-is-stack'); if (stk) stk.checked = false;
   const stkW = document.getElementById('qc-stack-fields'); if (stkW) stkW.style.display = 'none';
   resetStackChildren('qc-');
@@ -68,6 +95,11 @@ export function saveQuickCapture() {
     if (linkedType && !isStack) {
       habit.linkedType = linkedType;
       habit.linkedConfig = defaultLinkedConfig(linkedType);
+      if (linkedType === 'medication' || linkedType === 'diet') {
+        const refId = document.getElementById('qc-habit-link-ref')?.value || null;
+        habit.linkedConfig.refId = refId;
+        habit.linkedRefId = refId;
+      }
     }
     if (isStack) {
       habit.isStack = true;

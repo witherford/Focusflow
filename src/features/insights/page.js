@@ -275,6 +275,67 @@ export function renderInsightsBadHabits() {
   el.innerHTML = rows + '<div style="font-size:10px;color:var(--text3);margin-top:8px">Last 30 days · green = avoided · red = indulged · grey = unlogged</div>';
 }
 
+export function renderInsightsMedication() {
+  const el = document.getElementById('ins-medication'); if (!el) return;
+  const meds = S.meds || [];
+  if (!meds.length) {
+    el.innerHTML = '<div class="caption">No medication or supplements tracked yet.</div>';
+    return;
+  }
+  const log = S.medLog || {};
+  const days = []; for (let i = 6; i >= 0; i--) days.push(new Date(Date.now() - i * 864e5).toISOString().split('T')[0]);
+  let scheduled = 0, taken = 0;
+  meds.forEach(m => {
+    const times = m.schedule?.times || [];
+    const active = m.schedule?.activeDays;
+    days.forEach(k => {
+      const dn = new Date(k).toLocaleDateString('en-GB', { weekday: 'short' });
+      if (active && active.length && !active.includes(dn)) return;
+      scheduled += times.length;
+      const t = log[k]?.[m.id] || []; taken += t.length;
+    });
+  });
+  const adherence = scheduled ? Math.round(taken / scheduled * 100) : 0;
+  const low = meds.filter(m => m.reorderThreshold > 0 && (m.qtyOnHand ?? 0) <= m.reorderThreshold);
+  el.innerHTML = `<div class="stat-grid">
+    <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num">${adherence}%</div><div class="stat-label">Adherence · 7d</div></div>
+    <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num">${meds.length}</div><div class="stat-label">Tracked</div></div>
+    <div class="stat-card" style="--accent:var(--gold)"><div class="stat-num">${low.length}</div><div class="stat-label">Low stock</div></div>
+  </div>${low.length ? `<div style="font-size:11px;color:var(--text3);margin-top:8px">Reorder soon: ${low.map(m => m.name).join(', ')}</div>` : ''}`;
+}
+
+export function renderInsightsDiet() {
+  const el = document.getElementById('ins-diet'); if (!el) return;
+  const d = S.diet; const meals = S.meals || [];
+  if (!d || !meals.length) {
+    el.innerHTML = '<div class="caption">Add meals on the Diet page to see nutrition trends.</div>';
+    return;
+  }
+  const w = parseFloat(S.profile?.weight) || 0;
+  const tdee = d.manualTDEEOverride || (w ? Math.round(w * 30) : 0);
+  const adj = Number(d.calorieAdjust) || 0;
+  const target = !tdee ? 0 : (d.goal === 'lose' ? tdee - Math.abs(adj || 300) : d.goal === 'gain' ? tdee + Math.abs(adj || 300) : tdee + adj);
+
+  const days = []; for (let i = 6; i >= 0; i--) days.push(new Date(Date.now() - i * 864e5).toISOString().split('T')[0]);
+  const data = days.map(k => {
+    const entries = (d.log?.[k]) || [];
+    const kcal = entries.reduce((acc, e) => {
+      const m = meals.find(x => x.id === e.mealId);
+      return acc + (m?.totals?.kcal || 0) * (e.servings || 1);
+    }, 0);
+    return { day: k.slice(5), kcal: Math.round(kcal) };
+  });
+  const hit = target ? data.filter(x => x.kcal && Math.abs(x.kcal - target) <= 100).length : 0;
+  const avg = data.reduce((a, b) => a + b.kcal, 0) / 7;
+  el.innerHTML = `<div class="stat-grid">
+    <div class="stat-card" style="--accent:var(--violet)"><div class="stat-num">${target || '—'}</div><div class="stat-label">Daily target</div></div>
+    <div class="stat-card" style="--accent:var(--teal)"><div class="stat-num">${Math.round(avg)}</div><div class="stat-label">Avg · 7d kcal</div></div>
+    <div class="stat-card" style="--accent:var(--green)"><div class="stat-num">${hit}/7</div><div class="stat-label">Days near target</div></div>
+  </div>
+  <div style="margin-top:10px">${barChart(data, x => x.day, x => x.kcal, ' kcal')}</div>
+  ${!w && !d.manualTDEEOverride ? '<div style="font-size:11px;color:var(--text3);margin-top:6px">Set weight in Profile to compute a target.</div>' : ''}`;
+}
+
 export function renderInsights() {
   renderLevelCard();
   renderBadges();
@@ -285,6 +346,8 @@ export function renderInsights() {
   renderInsightsSleepHabit();
   renderInsightsSleepLog();
   renderInsightsBadHabits();
+  renderInsightsMedication();
+  renderInsightsDiet();
   const sum = weekSummary();
   setText('ins-hab-week', sum.habits.pct + '%');
   setText('ins-focus-week', (sum.dwMin / 60).toFixed(1) + 'h');
@@ -373,3 +436,5 @@ window.runWeeklyReview = runWeeklyReview;
 window.renderInsightsBadHabits = renderInsightsBadHabits;
 window.renderInsightsSleepHabit = renderInsightsSleepHabit;
 window.renderInsightsSleepLog = renderInsightsSleepLog;
+window.renderInsightsMedication = renderInsightsMedication;
+window.renderInsightsDiet = renderInsightsDiet;

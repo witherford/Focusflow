@@ -1,0 +1,97 @@
+<!-- ═══════════════════════════════════════ MEDICATION ════ -->
+<div class="page" id="page-medication">
+  <div class="page-header">
+    <div class="page-header-inner">
+      <div class="page-title-wrap"><div class="page-subtitle">Health</div><div class="page-title">Medication & Supplements</div></div>
+      <div class="header-actions">
+        <button class="btn btn-sm" onclick="openMedGroupModal()">+ Group</button>
+        <button class="btn btn-sm btn-primary" onclick="openMedModal()">+ Add</button>
+        <button class="menu-btn nav-menu-btn" aria-label="Open menu">☰</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 20px">
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:13px;color:var(--text2);line-height:1.55">
+        Track medication and supplements, set dose reminders, get notified when stock is low,
+        organise by group, and optionally surface doses as habits in your day.
+      </div>
+    </div>
+    <div id="med-reorder-banner" style="margin-bottom:14px"></div>
+    <div id="med-content"></div>
+  </div>
+</div>
+
+<!-- Medication add/edit modal -->
+<div class="modal-overlay" id="m-medication" style="display:none"><div class="modal">
+  <div class="modal-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div class="modal-title" id="m-medication-title" style="margin:0">Add medication</div>
+    <button class="btn-icon" onclick="closeModal('m-medication')">✕</button>
+  </div>
+  <div class="form-row"><label>Name</label><input type="text" id="med-name" autocapitalize="sentences"></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Type</label><select id="med-kind">
+      <option value="medication">💊 Medication</option>
+      <option value="supplement">🌿 Supplement</option>
+    </select></div>
+    <div class="form-row"><label>Status</label><select id="med-prescribed">
+      <option value="false">Over the counter</option>
+      <option value="true">Prescribed</option>
+    </select></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label>Prescriber type</label><select id="med-prescriber-type">
+      <option value="">— none —</option>
+      <option value="doctor">Doctor</option>
+      <option value="pharmacy">Pharmacy</option>
+      <option value="other">Other</option>
+    </select></div>
+    <div class="form-row"><label>Prescriber name</label><input type="text" id="med-prescriber-name" placeholder="Dr Smith / Boots"></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label>Dose amount</label><input type="number" id="med-dose-amt" min="0" step="0.01" placeholder="1"></div>
+    <div class="form-row"><label>Dose unit</label><input type="text" id="med-dose-unit" placeholder="tablet, mg, ml"></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-row"><label>Quantity on hand</label><input type="number" id="med-qty" min="0" step="1"></div>
+    <div class="form-row"><label>Reorder when ≤</label><input type="number" id="med-reorder" min="0" step="1"></div>
+  </div>
+  <div class="form-row"><label>Active days <span style="color:var(--text3);font-size:11px;font-weight:400;margin-left:6px">untick days you don't take it</span></label>
+    <div id="med-weekday-picker" class="weekday-picker">
+      <label class="wd-pill"><input type="checkbox" data-day="Mon" checked><span>M</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Tue" checked><span>T</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Wed" checked><span>W</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Thu" checked><span>T</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Fri" checked><span>F</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Sat" checked><span>S</span></label>
+      <label class="wd-pill"><input type="checkbox" data-day="Sun" checked><span>S</span></label>
+    </div>
+  </div>
+  <div class="form-row"><label>Times to take</label>
+    <div id="med-times-list"></div>
+    <button type="button" class="btn btn-xs" onclick="addMedTime()" style="margin-top:6px">+ Add time</button>
+  </div>
+  <div class="form-row"><label>Group</label><select id="med-group"></select></div>
+  <div class="form-row"><label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="med-as-habit"> Add as habit (creates a habit per dose-time, slotted into the matching time block)
+  </label></div>
+  <div class="form-row"><label>Notes</label><textarea id="med-notes" rows="2"></textarea></div>
+  <input type="hidden" id="med-edit-id">
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveMedication()">Save</button>
+    <button class="btn" onclick="closeModal('m-medication')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Group add/edit modal -->
+<div class="modal-overlay" id="m-medication-group" style="display:none"><div class="modal" style="max-width:380px">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="m-medication-group-title">New group</div>
+  <div class="form-row"><label>Group name</label><input type="text" id="med-group-name" autocapitalize="sentences"></div>
+  <input type="hidden" id="med-group-edit-id">
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-primary" style="flex:1" onclick="saveMedGroup()">Save</button>
+    <button class="btn" onclick="closeModal('m-medication-group')">Cancel</button>
+  </div>
+</div></div>

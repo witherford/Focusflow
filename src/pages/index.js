@@ -17,13 +17,15 @@ import journal    from './journal.html?raw';
 import profile    from './profile.html?raw';
 import docs       from './docs.html?raw';
 import settings   from './settings.html?raw';
+import medication from './medication.html?raw';
+import diet       from './diet.html?raw';
 
 // Order matches the original index.html so any DOM-order-sensitive
 // styling or sibling-selectors keep working.
 const PARTIALS = [
   dashboard, habits, chores, projects, goals, insights, deepwork,
   meditation, fitness, weight, sleep, shopping, journal, profile,
-  docs, settings,
+  docs, settings, medication, diet,
 ];
 
 export function injectPages() {
