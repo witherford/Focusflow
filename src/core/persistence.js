@@ -161,6 +161,7 @@ export function save() {
   showAutosaveDot('saving');
   clearTimeout(_saveT);
   _saveT = setTimeout(flushNow, 400);
+  try { window.cloudSyncNotifyChange?.(); } catch {}
 }
 
 async function flushNow() {

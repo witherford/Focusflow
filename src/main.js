@@ -169,6 +169,7 @@ window.renderBadHabits = renderBadHabits;
 // ── Init ────────────────────────────────────────────────────────────────────
 
 await load();
+window.cloudSyncInit?.();
 
 // V1.1.3 — one-shot migration: convert legacy profile.negHabits / negCustom
 // into actual habits with kind:'bad' so they show up alongside good habits in
