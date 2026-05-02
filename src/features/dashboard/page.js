@@ -1,5 +1,5 @@
 // Dashboard — "Today" home view
-import { S, today, weekKey, haptic, uid } from '../../core/state.js';
+import { S, today, haptic, uid } from '../../core/state.js';
 import { save } from '../../core/persistence.js';
 import { progressRing } from '../../ui/progressRing.js';
 import { goalProgress, tasksTowardGoals } from '../goals/progress.js';
@@ -90,7 +90,7 @@ function setText(id, v) { const el = document.getElementById(id); if (el) el.tex
 
 export function renderUpNext() {
   const el = document.getElementById('dash-up-next'); if (!el) return;
-  const log = S.habitLog[today()] || {}, cl = S.choreLog[weekKey()] || {};
+  const log = S.habitLog[today()] || {};
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const block = currentBlock();
   const items = [];
@@ -103,7 +103,7 @@ export function renderUpNext() {
     items.push({ kind: h.kind === 'bad' ? 'badhabit' : 'habit', id: h.id, icon: h.icon || (h.kind === 'bad' ? '🚫' : '●'), name: h.name, streak });
   });
   if (block === 'morning') {
-    S.chores.filter(c => c.day === todayDay && !cl[c.id]).slice(0, 2).forEach(c => items.push({ kind: 'chore', id: c.id, icon: '🧹', name: c.name }));
+    S.chores.filter(c => c.day === todayDay && !(S.choreLog[effectivePeriodKey(c)]?.[c.id])).slice(0, 2).forEach(c => items.push({ kind: 'chore', id: c.id, icon: '🧹', name: c.name }));
   }
   if (!items.length) { el.innerHTML = ''; return; }
   const blockIcon = { morning: '☀️', afternoon: '🌤', evening: '🌙' }[block];
@@ -229,7 +229,7 @@ export function renderBadHabits() {
 
 export function renderTimeblocks() {
   const blocks = [{ id: 'morning', label: 'Morning', icon: '☀️', time: S.profile.wake || '06:00' }, { id: 'afternoon', label: 'Afternoon', icon: '🌤', time: '12:00' }, { id: 'evening', label: 'Evening', icon: '🌙', time: '18:00' }];
-  const log = S.habitLog[today()] || {}, cl = S.choreLog[weekKey()] || {};
+  const log = S.habitLog[today()] || {};
   const todayDay = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const el = document.getElementById('dash-timeblocks'); if (!el) return;
   const bhLog = S.badHabitLog?.[today()] || {};
@@ -255,7 +255,7 @@ export function renderTimeblocks() {
         const streakChip = streak > 0 ? `<span class="dash-row-streak" title="Streak">🔥${streak}</span>` : '';
         return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}${streakChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
       }),
-      ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${cl[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
+      ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${S.choreLog[effectivePeriodKey(c)]?.[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
       ...bT.map(t => `<div class="timeblock-item" onclick="toggleTaskQuick('${t.id}')"><div class="tb-check">✓</div><span style="flex:1">📋 ${t.name}</span><span class="badge badge-${t.priority === 'high' ? 'rose' : t.priority === 'medium' ? 'gold' : 'green'}" style="font-size:10px">${t.priority}</span></div>`)
     ].join('');
     return `<div class="timeblock"><div class="timeblock-header"><span style="font-size:18px">${b.icon}</span><span style="font-weight:600;font-size:14px;margin-left:4px">${b.label}</span><span class="timeblock-time">${b.time}</span></div><div class="timeblock-body">${items || '<div style="color:var(--text3);font-size:13px;padding:4px">Nothing scheduled</div>'}</div></div>`;

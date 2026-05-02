@@ -19,6 +19,7 @@ import {
   calcBadStreak,
   renderHabitHeatmap,
   weeklyCompletion,
+  streakGoalTarget,
 } from './streaks.js';
 import { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
 
@@ -37,6 +38,7 @@ export {
   calcBadStreak,
   renderHabitHeatmap,
   weeklyCompletion,
+  streakGoalTarget,
 } from './streaks.js';
 export { openLinkedHabit, markHabitDoneFromFlow } from './linkedFlow.js';
 
@@ -69,9 +71,13 @@ function renderHabitCard(h, { flat = false } = {}) {
   const pct = counter && target > 0 ? Math.min(100, Math.round(count / target * 100)) : (done ? 100 : 0);
   const streak = calcStreak(h.id);
   const wk = weeklyCompletion(h.id);
+  const goal = streakGoalTarget(h, streak);
+  const streakText = goal > 0
+    ? `${streak} / ${goal}`
+    : `${streak} day${streak === 1 ? '' : 's'}`;
   const meta = counter
-    ? `${count}${isCumulative(h) ? '' : '/' + target}${h.unit ? ' ' + h.unit : ''} · Streak ${streak}d · Week ${wk.done}/${wk.target}`
-    : `Streak: ${streak} day${streak === 1 ? '' : 's'} · Week ${wk.done}/${wk.target}`;
+    ? `${count}${isCumulative(h) ? '' : '/' + target}${h.unit ? ' ' + h.unit : ''} · ${streakText}`
+    : streakText;
 
   // Binary habits get a weekly-completion ring (e.g. 1/7) so progress is visible
   // without needing to tap into the habit. Counter habits keep their value-ring.
