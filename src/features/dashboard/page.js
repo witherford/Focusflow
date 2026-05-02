@@ -268,7 +268,11 @@ export function renderTimeblocks() {
           }).join('');
           return parentRow + kids;
         }
-        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}<span class="badge badge-violet" style="font-size:10px">habit</span></div>`;
+        const medBadge = h.linkedType === 'medication'
+          ? `<span class="badge ${h.medCategory === 'peptide' ? 'badge-gold' : h.medCategory === 'supplement' ? 'badge-green' : 'badge-teal'}" style="font-size:10px">${h.medCategory === 'peptide' ? 'Peptide' : h.medCategory === 'supplement' ? 'Supplement' : 'Medication'}</span>`
+          : '';
+        const tagBadge = medBadge || `<span class="badge badge-violet" style="font-size:10px">habit</span>`;
+        return `<div class="timeblock-item" onclick="toggleHabitDash('${h.id}')"><div class="tb-check ${habitDoneToday(h) ? 'done' : ''}">✓</div><span style="flex:1">${h.icon || '●'} ${h.name}</span>${wkChip}${tagBadge}</div>`;
       }),
       ...bC.map(c => `<div class="timeblock-item" onclick="toggleChoreDash('${c.id}')"><div class="tb-check ${S.choreLog[effectivePeriodKey(c)]?.[c.id] ? 'done' : ''}">✓</div><span style="flex:1">🧹 ${c.name}</span><span class="badge badge-teal" style="font-size:10px">chore</span></div>`),
       ...bT.map(t => `<div class="timeblock-item" onclick="toggleTaskQuick('${t.id}')"><div class="tb-check">✓</div><span style="flex:1">📋 ${t.name}</span><span class="badge badge-${t.priority === 'high' ? 'rose' : t.priority === 'medium' ? 'gold' : 'green'}" style="font-size:10px">${t.priority}</span></div>`)

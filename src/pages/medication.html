@@ -34,29 +34,108 @@
     <div class="form-row"><label>Type</label><select id="med-kind">
       <option value="medication">💊 Medication</option>
       <option value="supplement">🌿 Supplement</option>
+      <option value="peptide">🧪 Peptide</option>
     </select></div>
     <div class="form-row"><label>Status</label><select id="med-prescribed">
       <option value="false">Over the counter</option>
       <option value="true">Prescribed</option>
     </select></div>
   </div>
+  <div class="form-row"><label>How is it taken</label><select id="med-delivery">
+    <option value="pill">💊 Pill</option>
+    <option value="tablet">⚪ Tablet</option>
+    <option value="capsule">🟡 Capsule</option>
+    <option value="injection">💉 Injection</option>
+    <option value="iv">🩸 IV drip</option>
+    <option value="nasal">👃 Nasal spray</option>
+    <option value="patch">🩹 Patch</option>
+    <option value="cream">🧴 Cream / topical</option>
+    <option value="liquid">🥄 Liquid / syrup</option>
+    <option value="inhaler">🫁 Inhaler</option>
+    <option value="drops">💧 Drops</option>
+    <option value="sublingual">👅 Sublingual (under tongue)</option>
+    <option value="suppository">⚕️ Suppository</option>
+    <option value="powder">🥄 Powder</option>
+    <option value="gummy">🍬 Gummy</option>
+    <option value="lozenge">🍬 Lozenge</option>
+    <option value="other">❓ Other</option>
+  </select></div>
   <div class="form-grid">
     <div class="form-row"><label>Prescriber type</label><select id="med-prescriber-type">
       <option value="">— none —</option>
-      <option value="doctor">Doctor</option>
-      <option value="pharmacy">Pharmacy</option>
+      <option value="doctor">👨‍⚕️ Doctor</option>
+      <option value="pharmacy">🏪 Pharmacy</option>
+      <option value="private">🏥 Private health care</option>
       <option value="other">Other</option>
     </select></div>
     <div class="form-row"><label>Prescriber name</label><input type="text" id="med-prescriber-name" placeholder="Dr Smith / Boots"></div>
   </div>
   <div class="form-grid">
     <div class="form-row"><label>Dose amount</label><input type="number" id="med-dose-amt" min="0" step="0.01" placeholder="1"></div>
-    <div class="form-row"><label>Dose unit</label><input type="text" id="med-dose-unit" placeholder="tablet, mg, ml"></div>
+    <div class="form-row"><label>Dose unit</label><select id="med-dose-unit-sel" onchange="onDoseUnitChange()">
+      <option value="tablet">tablet</option>
+      <option value="capsule">capsule</option>
+      <option value="ml">ml</option>
+      <option value="L">L</option>
+      <option value="mg">mg</option>
+      <option value="mcg">mcg</option>
+      <option value="g">g</option>
+      <option value="units">units</option>
+      <option value="IU">IU</option>
+      <option value="drops">drops</option>
+      <option value="puff">puff</option>
+      <option value="spray">spray</option>
+      <option value="patch">patch</option>
+      <option value="scoop">scoop</option>
+      <option value="custom">Custom…</option>
+    </select></div>
   </div>
+  <div class="form-row" id="med-dose-unit-custom-row" style="display:none"><label>Custom unit</label><input type="text" id="med-dose-unit-custom" placeholder="e.g. sachet, vial"></div>
   <div class="form-grid">
     <div class="form-row"><label>Quantity on hand</label><input type="number" id="med-qty" min="0" step="1"></div>
     <div class="form-row"><label>Reorder when ≤</label><input type="number" id="med-reorder" min="0" step="1"></div>
   </div>
+  <div class="form-row"><label>Reorder reminder schedule (optional)</label><select id="med-reorder-schedule">
+    <option value="">— none —</option>
+    <option value="same-day-1m">Same day every month</option>
+    <option value="same-day-2m">Same day every 2 months</option>
+    <option value="same-day-3m">Same day every 3 months</option>
+    <option value="same-day-4m">Same day every 4 months</option>
+    <option value="same-day-6m">Same day every 6 months</option>
+    <option value="same-day-12m">Same day every 12 months</option>
+    <option value="first-day-1m">First day of each month</option>
+    <option value="first-day-2m">First day of every 2 months</option>
+    <option value="first-day-3m">First day of every 3 months</option>
+    <option value="first-day-4m">First day of every 4 months</option>
+    <option value="first-day-6m">First day of every 6 months</option>
+    <option value="first-day-12m">First day of every 12 months</option>
+    <option value="last-day-1m">Last day of each month</option>
+    <option value="last-day-2m">Last day of every 2 months</option>
+    <option value="last-day-3m">Last day of every 3 months</option>
+    <option value="last-day-4m">Last day of every 4 months</option>
+    <option value="last-day-6m">Last day of every 6 months</option>
+    <option value="last-day-12m">Last day of every 12 months</option>
+    <option value="first-wd-1m">First working day of each month</option>
+    <option value="first-wd-2m">First working day of every 2 months</option>
+    <option value="first-wd-3m">First working day of every 3 months</option>
+    <option value="first-wd-4m">First working day of every 4 months</option>
+    <option value="first-wd-6m">First working day of every 6 months</option>
+    <option value="first-wd-12m">First working day of every 12 months</option>
+    <option value="last-wd-1m">Last working day of each month</option>
+    <option value="last-wd-2m">Last working day of every 2 months</option>
+    <option value="last-wd-3m">Last working day of every 3 months</option>
+    <option value="last-wd-4m">Last working day of every 4 months</option>
+    <option value="last-wd-6m">Last working day of every 6 months</option>
+    <option value="last-wd-12m">Last working day of every 12 months</option>
+  </select>
+  <div style="font-size:11px;color:var(--text3);margin-top:4px">Schedules a reminder regardless of stock level so you can pre-order ahead of time.</div></div>
+  <div class="form-grid">
+    <div class="form-row"><label>Expiry date</label><input type="date" id="med-expiry"></div>
+    <div class="form-row" style="align-self:end"><label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="med-no-expiry" onchange="onNoExpiryChange()"> No expiry date
+    </label></div>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin:-6px 0 8px">After the expiry date, this item is hidden from the dashboard until you renew it.</div>
   <div class="form-row"><label>Active days <span style="color:var(--text3);font-size:11px;font-weight:400;margin-left:6px">untick days you don't take it</span></label>
     <div id="med-weekday-picker" class="weekday-picker">
       <label class="wd-pill"><input type="checkbox" data-day="Mon" checked><span>M</span></label>

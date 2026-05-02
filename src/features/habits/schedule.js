@@ -6,6 +6,11 @@ const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // True if the habit is scheduled to run on the given date (a YYYY-MM-DD string).
 // Empty / missing activeDays = every day.
 export function isHabitActiveOnDate(h, dateStr) {
+  // Expiry — medication-linked habits with an expiry date drop off the
+  // dashboard and all habit views once `dateStr` is past `h.expiryDate`.
+  if (h?.expiryDate && !h?.noExpiry) {
+    if (dateStr > h.expiryDate) return false;
+  }
   if (!h?.activeDays || !Array.isArray(h.activeDays) || h.activeDays.length === 0) return true;
   const dow = new Date(dateStr + 'T12:00:00').getDay();
   return h.activeDays.includes(WEEKDAY_SHORT[dow]);

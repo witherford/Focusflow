@@ -22,9 +22,51 @@ function blockForTime(hhmm) {
 function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 // ── Targets ─────────────────────────────────────────────────────────────────
+const ACTIVITY = {
+  sedentary: { mult: 1.2, label: 'Sedentary (little/no exercise)' },
+  light:     { mult: 1.375, label: 'Lightly active (1–3 days/week)' },
+  moderate:  { mult: 1.55, label: 'Moderately active (3–5 days/week)' },
+  very:      { mult: 1.725, label: 'Very active (6–7 days/week)' },
+  extra:     { mult: 1.9, label: 'Extra active (athlete / physical job)' },
+};
+
+const CALC_INFO = {
+  'mifflin':  'Mifflin-St Jeor (1990) — most accurate for the general adult population. The default used by NHS and most modern apps.',
+  'harris':   'Harris-Benedict (revised 1984) — older formula; tends to slightly over-estimate BMR vs. Mifflin.',
+  'katch':    'Katch-McArdle — based on lean body mass; the most accurate if you know your body-fat percentage.',
+  'simple':   'Simple multiplier — kg × 30. Quick rough estimate; ignores age/sex/activity.',
+};
+
+function bmrMifflin(w, h, age, sex) { return 10 * w + 6.25 * h - 5 * age + (sex === 'male' ? 5 : -161); }
+function bmrHarris(w, h, age, sex)  { return sex === 'male'
+  ? 88.362 + 13.397 * w + 4.799 * h - 5.677 * age
+  : 447.593 + 9.247 * w + 3.098 * h - 4.330 * age; }
+function bmrKatch(w, bf)            { const lbm = w * (1 - (Number(bf) || 0) / 100); return 370 + 21.6 * lbm; }
+
+function computeCalculatorTDEE() {
+  const c = diet().calculator || {};
+  const w = parseFloat(c.weight ?? S.profile?.weight) || 0;
+  const h = parseFloat(c.height) || 0;
+  const age = parseInt(c.age, 10) || 0;
+  const sex = c.sex || 'male';
+  const bf = parseFloat(c.bodyFat) || 0;
+  const act = ACTIVITY[c.activity || 'moderate'] || ACTIVITY.moderate;
+  const method = c.method || 'mifflin';
+  let bmr = 0;
+  if (method === 'mifflin' && w && h && age) bmr = bmrMifflin(w, h, age, sex);
+  else if (method === 'harris' && w && h && age) bmr = bmrHarris(w, h, age, sex);
+  else if (method === 'katch' && w && bf) bmr = bmrKatch(w, bf);
+  else if (method === 'simple' && w) return Math.round(w * 30);
+  if (!bmr) return 0;
+  return Math.round(bmr * act.mult);
+}
+
 function tdee() {
   const d = diet();
   if (d.manualTDEEOverride) return Number(d.manualTDEEOverride);
+  // Prefer calculator output when set
+  const calc = computeCalculatorTDEE();
+  if (calc) return calc;
   const wRaw = parseFloat(S.profile?.weight) || 0;
   if (!wRaw) return 0;
   return Math.round(wRaw * 30);
@@ -265,6 +307,15 @@ export function unlogMeal(idx) {
 export function updateDietGoal(v) { diet().goal = v; save(); renderDiet(); }
 export function updateDietAdjust(v) { diet().calorieAdjust = parseInt(v, 10) || 0; save(); renderDiet(); }
 export function updateDietTDEE(v)   { const n = parseInt(v, 10); diet().manualTDEEOverride = n > 0 ? n : null; save(); renderDiet(); }
+export function updateCalcField(k, v) {
+  const d = diet(); if (!d.calculator) d.calculator = {};
+  d.calculator[k] = v; save(); renderDiet();
+}
+export function showCalcInfo(method) {
+  const txt = CALC_INFO[method] || '';
+  if (txt) window.toast?.(txt);
+}
+
 
 // ── Render ──────────────────────────────────────────────────────────────────
 function renderSummary() {
@@ -298,6 +349,42 @@ function renderSummary() {
       <div class="stat-card" style="--accent:var(--green)"><div class="stat-num">${consumed.c.toFixed(0)}g</div><div class="stat-label">Carbs</div></div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px">Fat ${consumed.f.toFixed(0)}g · TDEE ${tdee()} kcal · weight ${w || '—'}kg</div>
+  </div>`;
+}
+
+function renderCalculator() {
+  const el = document.getElementById('diet-calculator'); if (!el) return;
+  const c = diet().calculator || {};
+  const method = c.method || 'mifflin';
+  const result = computeCalculatorTDEE();
+  const showHeight = method !== 'simple' && method !== 'katch';
+  const showAge    = method !== 'simple' && method !== 'katch';
+  const showSex    = method === 'mifflin' || method === 'harris';
+  const showBF     = method === 'katch';
+  el.innerHTML = `<div class="card">
+    <div class="card-header"><div class="card-title">🧮 Calorie calculator</div>${result ? `<div style="font-size:13px;color:var(--teal);font-weight:600">${result} kcal/day TDEE</div>` : ''}</div>
+    <div class="form-row"><label style="display:flex;align-items:center;gap:6px">Method <button type="button" class="btn btn-xs" title="What does this mean?" onclick="showCalcInfo('${method}')" style="padding:1px 6px;font-size:11px">i</button></label>
+      <select onchange="updateCalcField('method', this.value); showCalcInfo(this.value)">
+        <option value="mifflin"${method==='mifflin'?' selected':''}>Mifflin-St Jeor (recommended)</option>
+        <option value="harris"${method==='harris'?' selected':''}>Harris-Benedict (revised)</option>
+        <option value="katch"${method==='katch'?' selected':''}>Katch-McArdle (needs body-fat %)</option>
+        <option value="simple"${method==='simple'?' selected':''}>Simple (weight × 30)</option>
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Weight (kg)</label><input type="number" step="0.1" value="${c.weight ?? S.profile?.weight ?? ''}" onchange="updateCalcField('weight', this.value)"></div>
+      ${showHeight ? `<div class="form-row"><label>Height (cm)</label><input type="number" step="1" value="${c.height ?? ''}" onchange="updateCalcField('height', this.value)"></div>` : ''}
+      ${showAge    ? `<div class="form-row"><label>Age</label><input type="number" step="1" value="${c.age ?? ''}" onchange="updateCalcField('age', this.value)"></div>` : ''}
+      ${showSex    ? `<div class="form-row"><label>Sex</label><select onchange="updateCalcField('sex', this.value)">
+        <option value="male"${(c.sex||'male')==='male'?' selected':''}>Male</option>
+        <option value="female"${c.sex==='female'?' selected':''}>Female</option>
+      </select></div>` : ''}
+      ${showBF     ? `<div class="form-row"><label>Body fat %</label><input type="number" step="0.1" value="${c.bodyFat ?? ''}" onchange="updateCalcField('bodyFat', this.value)"></div>` : ''}
+      <div class="form-row"><label>Activity</label><select onchange="updateCalcField('activity', this.value)">
+        ${Object.entries(ACTIVITY).map(([k, a]) => `<option value="${k}"${(c.activity||'moderate')===k?' selected':''}>${a.label}</option>`).join('')}
+      </select></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">TDEE feeds the daily target above — the goal/adjust setting then adds or subtracts kcal.</div>
   </div>`;
 }
 
@@ -418,6 +505,7 @@ function bindTabs() {
 export function renderDiet() {
   bindTabs();
   renderSummary();
+  renderCalculator();
   renderSettings();
   renderToday();
   renderDB();
@@ -441,6 +529,8 @@ window.unlogMeal = unlogMeal;
 window.updateDietGoal = updateDietGoal;
 window.updateDietAdjust = updateDietAdjust;
 window.updateDietTDEE = updateDietTDEE;
+window.updateCalcField = updateCalcField;
+window.showCalcInfo = showCalcInfo;
 window.renderDiet = renderDiet;
 window.listMealsForPicker = listMealsForPicker;
 window.logMealFromHabitTick = logMealFromHabitTick;

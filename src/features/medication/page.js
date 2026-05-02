@@ -21,10 +21,61 @@ function blockForTime(hhmm) {
 function dayName() { return new Date().toLocaleDateString('en-GB', { weekday: 'short' }); }
 
 // ── Reminders ───────────────────────────────────────────────────────────────
+// ── Reorder-schedule helpers ────────────────────────────────────────────────
+function lastDayOfMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function isWeekday(d) { const day = d.getDay(); return day !== 0 && day !== 6; }
+function firstWorkingDay(y, m) { const d = new Date(y, m, 1); while (!isWeekday(d)) d.setDate(d.getDate() + 1); return d; }
+function lastWorkingDay(y, m)  { const d = new Date(y, m, lastDayOfMonth(y, m)); while (!isWeekday(d)) d.setDate(d.getDate() - 1); return d; }
+
+// Compute the next firing date for a reorderSchedule string.
+// Returns a Date in the future (relative to `from`), or null for invalid/empty schedules.
+export function nextReorderAt(schedule, from = new Date(), referenceDay = null) {
+  if (!schedule) return null;
+  const m = schedule.match(/^(same-day|first-day|last-day|first-wd|last-wd)-(\d+)m$/);
+  if (!m) return null;
+  const kind = m[1]; const months = parseInt(m[2], 10);
+  const start = new Date(from); start.setHours(9, 0, 0, 0);
+  // Try this month and the next few cycles; pick the first occurrence after `from`.
+  for (let i = 0; i < 24; i++) {
+    const probe = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    let candidate;
+    if (kind === 'same-day') {
+      const day = referenceDay || start.getDate();
+      candidate = new Date(probe.getFullYear(), probe.getMonth(), Math.min(day, lastDayOfMonth(probe.getFullYear(), probe.getMonth())));
+    } else if (kind === 'first-day') {
+      candidate = new Date(probe.getFullYear(), probe.getMonth(), 1);
+    } else if (kind === 'last-day') {
+      candidate = new Date(probe.getFullYear(), probe.getMonth(), lastDayOfMonth(probe.getFullYear(), probe.getMonth()));
+    } else if (kind === 'first-wd') {
+      candidate = firstWorkingDay(probe.getFullYear(), probe.getMonth());
+    } else if (kind === 'last-wd') {
+      candidate = lastWorkingDay(probe.getFullYear(), probe.getMonth());
+    }
+    candidate.setHours(9, 0, 0, 0);
+    // Only keep if it falls on the right cycle (every N months relative to start month)
+    const monthDiff = (candidate.getFullYear() - start.getFullYear()) * 12 + (candidate.getMonth() - start.getMonth());
+    if (monthDiff % months !== 0) continue;
+    if (candidate.getTime() > from.getTime()) return candidate;
+  }
+  return null;
+}
+
 async function scheduleMedReminders(med) {
   if (!med?.schedule?.times?.length) return;
   await ensurePermission().catch(() => false);
   const days = (med.schedule.activeDays && med.schedule.activeDays.length) ? med.schedule.activeDays : DAYS;
+  // Time-based reorder reminder (independent of stock level)
+  if (med.reorderSchedule) {
+    const at = nextReorderAt(med.reorderSchedule, new Date(), med._reorderRefDay || null);
+    if (at) {
+      schedule({
+        id: hashId('med-reorder-sched-' + med.id),
+        title: `Reorder ${med.name}`,
+        body: `Scheduled reorder reminder`,
+        at,
+      }).catch(() => {});
+    }
+  }
   med.schedule.times.forEach(t => {
     const [h, m] = t.split(':').map(Number);
     // Schedule next occurrence (best-effort) — find the next active-day match.
@@ -64,6 +115,9 @@ function clearMedHabits(medId) {
   S.habits = (S.habits || []).filter(h => h.managedBy !== tag);
 }
 
+const KIND_ICON = { medication: '💊', supplement: '🌿', peptide: '🧪' };
+const KIND_LABEL = { medication: 'Medication', supplement: 'Supplement', peptide: 'Peptide' };
+
 function syncMedHabits(med) {
   clearMedHabits(med.id);
   if (!med.asHabit) return;
@@ -76,12 +130,15 @@ function syncMedHabits(med) {
       name: `${med.name} @ ${t}`,
       kind: 'good',
       block: blockForTime(t),
-      icon: med.kind === 'supplement' ? '🌿' : '💊',
+      icon: KIND_ICON[med.kind] || '💊',
       mode: 'binary',
       activeDays: (med.schedule.activeDays && med.schedule.activeDays.length) ? med.schedule.activeDays.slice() : null,
       linkedType: 'medication',
       linkedRefId: med.id,
       managedBy: tag,
+      medCategory: med.kind,
+      expiryDate: med.expiryDate || null,
+      noExpiry: !!med.noExpiry,
       journalPrompt: false,
     });
   });
@@ -112,6 +169,21 @@ function renderTimeRow(time = '08:00') {
 
 export function addMedTime() { renderTimeRow('08:00'); }
 
+export function onDoseUnitChange() {
+  const sel = document.getElementById('med-dose-unit-sel');
+  const row = document.getElementById('med-dose-unit-custom-row');
+  if (!sel || !row) return;
+  row.style.display = sel.value === 'custom' ? '' : 'none';
+}
+
+export function onNoExpiryChange() {
+  const cb = document.getElementById('med-no-expiry');
+  const inp = document.getElementById('med-expiry');
+  if (!cb || !inp) return;
+  inp.disabled = cb.checked;
+  if (cb.checked) inp.value = '';
+}
+
 function readTimes() {
   return [...document.querySelectorAll('#med-times-list input[type=time]')]
     .map(inp => inp.value).filter(Boolean);
@@ -132,10 +204,22 @@ export function openMedModal(id) {
   document.getElementById('med-prescribed').value = editing?.prescribed ? 'true' : 'false';
   document.getElementById('med-prescriber-type').value = editing?.prescriber?.type || '';
   document.getElementById('med-prescriber-name').value = editing?.prescriber?.name || '';
+  document.getElementById('med-delivery').value = editing?.delivery || 'pill';
   document.getElementById('med-dose-amt').value = editing?.dose?.amount ?? '';
-  document.getElementById('med-dose-unit').value = editing?.dose?.unit || '';
+  // Dose unit — match against preset list, else fall back to custom.
+  const unitSel = document.getElementById('med-dose-unit-sel');
+  const unitCustom = document.getElementById('med-dose-unit-custom');
+  const presetUnits = ['tablet','capsule','ml','L','mg','mcg','g','units','IU','drops','puff','spray','patch','scoop'];
+  const u = editing?.dose?.unit || 'tablet';
+  if (presetUnits.includes(u)) { unitSel.value = u; unitCustom.value = ''; }
+  else { unitSel.value = 'custom'; unitCustom.value = u; }
+  onDoseUnitChange();
   document.getElementById('med-qty').value = editing?.qtyOnHand ?? '';
   document.getElementById('med-reorder').value = editing?.reorderThreshold ?? '';
+  document.getElementById('med-reorder-schedule').value = editing?.reorderSchedule || '';
+  document.getElementById('med-expiry').value = editing?.expiryDate || '';
+  document.getElementById('med-no-expiry').checked = !!editing?.noExpiry;
+  onNoExpiryChange();
   document.getElementById('med-as-habit').checked = !!editing?.asHabit;
   document.getElementById('med-notes').value = editing?.notes || '';
   setWeekdayPicker('med-weekday-picker', editing?.schedule?.activeDays || null);
@@ -159,12 +243,18 @@ export function saveMedication() {
     type: document.getElementById('med-prescriber-type').value,
     name: document.getElementById('med-prescriber-name').value.trim(),
   };
+  med.delivery = document.getElementById('med-delivery').value;
+  const unitSel = document.getElementById('med-dose-unit-sel').value;
+  const unitCustom = document.getElementById('med-dose-unit-custom').value.trim();
   med.dose = {
     amount: parseFloat(document.getElementById('med-dose-amt').value) || 0,
-    unit: document.getElementById('med-dose-unit').value.trim(),
+    unit: unitSel === 'custom' ? (unitCustom || 'unit') : unitSel,
   };
   med.qtyOnHand = parseInt(document.getElementById('med-qty').value, 10) || 0;
   med.reorderThreshold = parseInt(document.getElementById('med-reorder').value, 10) || 0;
+  med.reorderSchedule = document.getElementById('med-reorder-schedule').value || null;
+  med.expiryDate = document.getElementById('med-expiry').value || null;
+  med.noExpiry = !!document.getElementById('med-no-expiry').checked;
   med.schedule = {
     activeDays: readWeekdayPicker('med-weekday-picker'),
     times: readTimes(),
@@ -272,10 +362,10 @@ function renderMemberRow(m) {
   }).join(' ');
   return `<div class="med-row" data-med-id="${m.id}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:6px;background:var(--surface)">
     <span class="med-drag-handle" style="cursor:grab;color:var(--text3);user-select:none;touch-action:none;font-size:14px" title="Drag to reorder">≡</span>
-    <span style="font-size:18px">${m.kind === 'supplement' ? '🌿' : '💊'}</span>
+    <span style="font-size:18px">${KIND_ICON[m.kind] || '💊'}</span>
     <div style="flex:1;min-width:0">
-      <div style="font-weight:600;font-size:14px">${escapeHtml(m.name)}${m.prescribed ? ' <span class="badge" style="font-size:10px">Rx</span>' : ''}</div>
-      <div style="font-size:11px;color:var(--text3)">${m.dose?.amount || ''} ${escapeHtml(m.dose?.unit || '')} · next ${next || '—'}</div>
+      <div style="font-weight:600;font-size:14px">${escapeHtml(m.name)} <span class="badge" style="font-size:10px">${KIND_LABEL[m.kind] || 'Medication'}</span>${m.prescribed ? ' <span class="badge badge-violet" style="font-size:10px">Rx</span>' : ''}${m.expiryDate && !m.noExpiry ? ` <span class="badge ${m.expiryDate < today() ? 'badge-rose' : ''}" style="font-size:10px" title="Expires ${m.expiryDate}">exp ${m.expiryDate}</span>` : ''}</div>
+      <div style="font-size:11px;color:var(--text3)">${m.dose?.amount || ''} ${escapeHtml(m.dose?.unit || '')} · ${escapeHtml(m.delivery || 'pill')} · next ${next || '—'}</div>
       <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${timesHtml}</div>
     </div>
     <div style="text-align:right;font-size:11px">
@@ -343,6 +433,8 @@ export function listMedsForPicker() {
   return meds().map(m => ({ id: m.id, name: m.name, kind: m.kind }));
 }
 
+window.onDoseUnitChange = onDoseUnitChange;
+window.onNoExpiryChange = onNoExpiryChange;
 window.openMedModal = openMedModal;
 window.saveMedication = saveMedication;
 window.deleteMedication = deleteMedication;
