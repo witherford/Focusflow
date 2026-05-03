@@ -1,15 +1,7 @@
 /* Page/feature-specific styles — from focusflow_v10.html lines 199-432 */
 
 /* Habit rows */
-.habit-row-wrap { margin-bottom: 6px; }
-.habit-row-wrap > .habit-row { margin-bottom: 0; }
-.stack-children { margin: 4px 0 8px 14px; padding-left: 10px; border-left: 2px solid var(--border); }
-.stack-child { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; font-size: 13px; border-radius: 6px; }
-.stack-child:hover { background: var(--surface2); }
-.stack-child .tb-check { width: 18px; height: 18px; font-size: 11px; line-height: 18px; }
-.stack-child-name { flex: 1; min-width: 0; }
-.stack-child-meta { font-size: 10px; color: var(--text3); }
-.habit-row { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 6px; transition: all 0.15s; position: relative; min-height: 52px; }
+.habit-row { display: flex; align-items: center; gap: 4px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 6px; transition: all 0.15s; position: relative; overflow: hidden; min-height: 52px; }
 .habit-tap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 4px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; border-radius: 8px; position: relative; z-index: 1; }
 .habit-row > .btn-icon { position: relative; z-index: 2; }
 .habit-tap:active { background: rgba(124,110,247,0.06); }
