@@ -48,6 +48,43 @@ export function isUpdateAvailable(latest = _latestVersion) {
   return compareVersions(latest, APP_VERSION) > 0;
 }
 
+// Structured version report. Used by the sidebar "Check for updates" button
+// and the Settings card to show current vs latest in an unambiguous way.
+export async function getVersionReport() {
+  const latest = await fetchLatestVersion();
+  const cmp = latest ? compareVersions(latest, APP_VERSION) : null;
+  return {
+    current: APP_VERSION,
+    latest: latest || null,
+    upToDate: latest != null && cmp <= 0,
+    updateAvailable: latest != null ? cmp > 0 : !!window._ffUpdateAvailable,
+    fetchFailed: latest == null,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+function formatReportLines(rep) {
+  const cur = `Current version: V${rep.current}`;
+  const lat = rep.fetchFailed
+    ? 'Latest version: unavailable (network)'
+    : `Latest version: V${rep.latest}`;
+  let status;
+  if (rep.fetchFailed) status = 'Status: Could not check for updates.';
+  else if (rep.updateAvailable) status = 'Status: Update available — tap "Update now".';
+  else status = 'Status: You are on the latest version.';
+  return { cur, lat, status };
+}
+
+function reportToHtml(rep) {
+  const { cur, lat, status } = formatReportLines(rep);
+  const statusColor = rep.fetchFailed ? 'var(--rose)' : rep.updateAvailable ? 'var(--gold)' : 'var(--green)';
+  return `<div style="font-family:'DM Mono',monospace;font-size:12px;line-height:1.6">
+    <div>${cur}</div>
+    <div>${lat}</div>
+    <div style="color:${statusColor}">${status}</div>
+  </div>`;
+}
+
 // Render the small status block + Check / Update buttons that sits under the
 // logo version pill in the sidebar.
 export function renderSidebarUpdateStatus() {
@@ -61,8 +98,9 @@ export function renderSidebarUpdateStatus() {
       : `<span>The latest version of the app is V${latest}.</span>`;
   el.innerHTML = `
     <div class="sb-update-text">${status}</div>
+    <div id="sb-update-report" class="sb-update-report"></div>
     <div class="sb-update-actions">
-      <button class="btn btn-xs" onclick="checkForUpdatesNow()" id="sb-check-btn">↻ Check</button>
+      <button class="btn btn-xs" onclick="checkForUpdatesNow()" id="sb-check-btn">↻ Check for updates</button>
       ${updateAvail ? '<button class="btn btn-xs btn-primary" onclick="updaterApplyNow()">⬇ Update</button>' : ''}
     </div>
   `;
@@ -90,38 +128,50 @@ export function renderUpdaterSection() {
       <button class="btn btn-primary" onclick="updaterApplyNow()">⬇ Update now</button>
       <button class="btn" onclick="checkForUpdatesNow()">🔍 Check for updates</button>
     </div>
-    <div id="updater-status" style="font-size:12px;color:${available ? 'var(--gold)' : 'var(--text3)'};margin-top:10px;min-height:16px">${available ? 'A new version is ready — tap Update now.' : (latest ? 'Up to date.' : '')}</div>
+    <div id="updater-report" style="margin-top:10px"></div>
+    <div id="updater-status" style="font-size:12px;color:${available ? 'var(--gold)' : 'var(--text3)'};margin-top:8px;min-height:16px">${available ? 'A new version is ready — tap Update now.' : (latest ? 'Up to date.' : '')}</div>
   `;
 }
 
 // Combined check: pings the SW for new content AND fetches /version.json
 // to learn the actual latest version number. Refreshes both UI surfaces
-// (Settings card and sidebar status block).
+// (Settings card and sidebar status block) and renders a structured report
+// (current vs latest) into any element with id="updater-report" or
+// id="sb-update-report".
 export async function checkForUpdatesNow({ silent = false } = {}) {
   if (!silent) setStatus('Checking…');
   try {
     // Run both in parallel — version.json gives the human-readable number,
     // ffCheckForUpdate flips _ffUpdateAvailable when a SW is waiting.
-    const [latest] = await Promise.all([
+    const [, swPing] = await Promise.all([
       fetchLatestVersion(),
       window.ffCheckForUpdate?.()?.catch?.(() => null),
     ]);
+    void swPing;
+    const rep = await getVersionReport();
     renderSidebarUpdateStatus();
-    const avail = isUpdateAvailable(latest);
-    if (latest) {
-      if (avail) {
-        if (!silent) setStatus(`A new version (V${latest}) is ready — tap Update now.`, 'ok');
-        if (silent) window.toast?.(`New version V${latest} is available`);
-      } else {
-        if (!silent) setStatus(`You're on the latest (V${latest}).`, 'ok');
-      }
-    } else {
-      if (!silent) setStatus(window._ffUpdateAvailable ? 'A new version is ready — tap Update now.' : 'No update found.', 'ok');
-    }
-    // Re-render the Settings card if visible.
+    // Re-render the Settings card if visible (so the report HTML lands).
     if (document.getElementById('updater-section')?.offsetParent) renderUpdaterSection();
+    // Inject the structured report into both surfaces if present.
+    const html = reportToHtml(rep);
+    const repEl = document.getElementById('updater-report');
+    if (repEl) repEl.innerHTML = html;
+    const sbRepEl = document.getElementById('sb-update-report');
+    if (sbRepEl) sbRepEl.innerHTML = html;
+    // Status text + toast summary.
+    const { status } = formatReportLines(rep);
+    if (!silent) setStatus(status.replace(/^Status:\s*/, ''), rep.fetchFailed ? 'err' : 'ok');
+    if (!silent) {
+      if (rep.fetchFailed) window.toast?.('Could not check for updates');
+      else if (rep.updateAvailable) window.toast?.(`Update available: V${rep.latest} (you're on V${rep.current})`);
+      else window.toast?.(`You're on the latest version (V${rep.current})`);
+    } else if (rep.updateAvailable) {
+      window.toast?.(`New version V${rep.latest} is available`);
+    }
+    return rep;
   } catch (e) {
     if (!silent) setStatus('Check failed: ' + (e?.message || 'unknown'), 'err');
+    return null;
   }
 }
 
@@ -158,15 +208,51 @@ export function autoCheckOnStartup({ delayMs = 1500 } = {}) {
 window.checkForUpdatesNow = (opts) => checkForUpdatesNow(opts);
 window.updaterCheck = () => checkForUpdatesNow();    // legacy alias
 
-window.updaterApplyNow = () => {
-  setStatus('Applying… page will reload.');
+async function clearAllCachesAndReload() {
   try {
-    if (typeof window.ffUpdateApp === 'function') {
-      window.ffUpdateApp(true);
-    } else {
-      // Fallback: hard reload bypassing cache.
-      setTimeout(() => location.reload(), 200);
+    if (typeof caches !== 'undefined' && caches.keys) {
+      const ks = await caches.keys();
+      await Promise.all(ks.map(k => caches.delete(k)));
     }
+  } catch (e) { console.warn('[updater] cache clear failed', e); }
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration?.();
+    if (reg) await reg.unregister().catch(() => {});
+  } catch {}
+  // Cache-busting reload — append a query param so the HTML shell isn't
+  // served from any HTTP cache layer the browser still has.
+  const u = new URL(window.location.href);
+  u.searchParams.set('_v', Date.now().toString());
+  window.location.replace(u.toString());
+}
+
+window.updaterApplyNow = async () => {
+  setStatus('Checking for updates…');
+  try {
+    // Force the SW to poll the server and fetch the freshest version.json.
+    const [latest] = await Promise.all([
+      fetchLatestVersion(),
+      window.ffCheckForUpdate?.()?.catch?.(() => null),
+    ]);
+    const swReady = !!window._ffUpdateAvailable;
+    const versionAvail = latest && isUpdateAvailable(latest);
+
+    if (!swReady && !versionAvail) {
+      setStatus(latest ? `You're already on the latest version (V${latest}).` : 'No update found.', 'ok');
+      return;
+    }
+
+    setStatus('Applying update… page will reload.');
+    if (swReady && typeof window.ffUpdateApp === 'function') {
+      window.ffUpdateApp(true);
+      // If the SW reload doesn't kick in within 2s, force a cache-clear reload
+      // so the user actually moves to the new build.
+      setTimeout(() => clearAllCachesAndReload(), 2000);
+      return;
+    }
+    // version.json says a newer build exists but the SW didn't pick it up
+    // (e.g. precache mismatch, no waiting worker). Hard-reload past caches.
+    await clearAllCachesAndReload();
   } catch (e) {
     setStatus('Update failed: ' + (e?.message || 'unknown'), 'err');
   }
