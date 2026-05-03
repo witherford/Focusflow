@@ -109,35 +109,37 @@ function renderHabitCard(h, { flat = false } = {}) {
   // buttons live as siblings of .habit-tap, so pointer events on a button
   // physically cannot bubble into the gesture handler.
   const stackChildren = h.isStack && Array.isArray(h.children) && h.children.length
-    ? `<div class="stack-children" style="margin:6px 0 4px 14px;padding-left:10px;border-left:2px solid var(--border)">${
+    ? `<div class="stack-children">${
         h.children.map(c => {
           const child = resolveChild(c); if (!child) return '';
           const cdone = doneToday(child);
           const cIcon = child.icon || (child.kind === 'bad' ? '🚫' : '●');
-          return `<div class="stack-child" onclick="event.stopPropagation();toggleHabit('${child.id}')" style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px"><div class="tb-check ${cdone ? 'done' : ''}" style="width:18px;height:18px;line-height:18px;font-size:11px">${cdone ? '✓' : '·'}</div><span style="flex:1">${cIcon} ${child.name}</span><span style="font-size:10px;color:var(--text3)">${child.mode === 'counter' ? 'counter' : 'binary'}${child.kind === 'bad' ? ' · bad' : ''}</span></div>`;
+          return `<div class="stack-child" onclick="event.stopPropagation();toggleHabit('${child.id}')"><div class="tb-check ${cdone ? 'done' : ''}">${cdone ? '✓' : '·'}</div><span class="stack-child-name">${cIcon} ${child.name}</span><span class="stack-child-meta">${child.mode === 'counter' ? 'counter' : 'binary'}${child.kind === 'bad' ? ' · bad' : ''}</span></div>`;
         }).join('')
       }</div>`
     : '';
   const stackBadge = h.isStack ? ' <span class="mode-chip">stack</span>' : '';
-  return `<div class="habit-row${done ? ' done' : ''}" data-habit-id="${h.id}">
-    <div class="habit-tap">
-      ${ring}
-      <div class="habit-info">
-        <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${stackBadge}${linkBadge}${xpChip}</div>
-        <div class="habit-meta">${meta}</div>
+  return `<div class="habit-row-wrap" data-habit-id="${h.id}">
+    <div class="habit-row${done ? ' done' : ''}">
+      <div class="habit-tap">
+        ${ring}
+        <div class="habit-info">
+          <div class="habit-name">${h.icon || '●'} ${h.name}${counter ? ' <span class="mode-chip">counter</span>' : ''}${isCumulative(h) ? ' <span class="mode-chip">cumulative</span>' : ''}${stackBadge}${linkBadge}${xpChip}</div>
+          <div class="habit-meta">${meta}</div>
+        </div>
+        ${blockBadge}
+        ${streakStatusBadge(h)}
       </div>
-      ${blockBadge}
-      ${streakStatusBadge(h)}
+      <button class="btn-icon" data-habit-action="edit" data-id="${h.id}" aria-label="Edit habit">✏️</button>
+      <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}" aria-label="Delete habit">✕</button>
     </div>
     ${stackChildren}
-    <button class="btn-icon" data-habit-action="edit" data-id="${h.id}" aria-label="Edit habit">✏️</button>
-    <button class="btn-icon danger" data-habit-action="del" data-id="${h.id}" aria-label="Delete habit">✕</button>
   </div>`;
 }
 
 function wireGestures(container) {
   if (!container) return;
-  container.querySelectorAll('.habit-row').forEach(row => {
+  container.querySelectorAll('.habit-row-wrap').forEach(row => {
     const id = row.dataset.habitId; if (!id) return;
     const h = S.habits.find(x => x.id === id); if (!h) return;
     const tap = row.querySelector('.habit-tap');
@@ -249,7 +251,7 @@ export function renderHabitsToday() {
     const listEl = el.querySelector(`[data-block-list="${b}"]`);
     if (listEl && bH.length > 1) {
       attachReorder(listEl, {
-        itemSelector: '.habit-row',
+        itemSelector: '.habit-row-wrap',
         onReorder: (from, to) => {
           const blockIds = bH.map(h => h.id);
           const movedId = blockIds[from];
@@ -279,7 +281,7 @@ export function renderHabitsAll() {
   if (!el._reorderWired && S.habits.length) {
     el._reorderWired = true;
     attachReorder(el, {
-      itemSelector: '.habit-row',
+      itemSelector: '.habit-row-wrap',
       onReorder: (from, to) => {
         reorderArr(S.habits, from, to);
         save(); renderHabitsAll(); renderHabitsToday(); window.renderDash?.();
